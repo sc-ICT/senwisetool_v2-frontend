@@ -60,6 +60,10 @@ export default function QuestionBankPage() {
     number | null
   >(null);
 
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<number>>(
+    new Set(),
+  );
+
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
@@ -101,8 +105,6 @@ export default function QuestionBankPage() {
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
 
-  const queryClient = useQueryClient();
-
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase();
 
@@ -137,6 +139,54 @@ export default function QuestionBankPage() {
         item.code.toLocaleLowerCase().includes(query),
     );
   }, [items, groups, searchQuery, selectedGroupId]);
+
+  const toggleQuestionSelection = (questionId: number) => {
+    setSelectedQuestionIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(questionId)) {
+        next.delete(questionId);
+      } else {
+        next.add(questionId);
+      }
+
+      return next;
+    });
+  };
+
+  const clearQuestionSelection = () => {
+    setSelectedQuestionIds(new Set());
+  };
+
+  const selectVisibleQuestions = () => {
+    setSelectedQuestionIds((current) => {
+      const next = new Set(current);
+
+      for (const item of filteredItems) {
+        next.add(item.id);
+      }
+
+      return next;
+    });
+  };
+
+  const deselectVisibleQuestions = () => {
+    setSelectedQuestionIds((current) => {
+      const next = new Set(current);
+
+      for (const item of filteredItems) {
+        next.delete(item.id);
+      }
+
+      return next;
+    });
+  };
+
+  const allVisibleQuestionsSelected =
+    filteredItems.length > 0 &&
+    filteredItems.every((item) => selectedQuestionIds.has(item.id));
+
+  const queryClient = useQueryClient();
 
   const createMutation = useMutation({
     mutationFn: async (formData: QuestionCreateFormData) => {
@@ -789,6 +839,99 @@ export default function QuestionBankPage() {
             </div>
           ) : (
             <div>
+              {selectedQuestionIds.size > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "0.75rem",
+                    padding: "0.75rem 1.25rem",
+                    borderBottom: "1px solid var(--color-border)",
+                    background: "rgba(93, 184, 58, 0.06)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      color: "var(--color-foreground)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "999px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(93, 184, 58, 0.14)",
+                        color: "#5DB83A",
+                        fontSize: "0.6875rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {selectedQuestionIds.size}
+                    </span>
+                    question
+                    {selectedQuestionIds.size > 1 ? "s" : ""} sélectionnée
+                    {selectedQuestionIds.size > 1 ? "s" : ""}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={clearQuestionSelection}
+                      style={{
+                        height: "32px",
+                        padding: "0 0.625rem",
+                        borderRadius: "0.5rem",
+                        border: "1px solid var(--color-border)",
+                        background: "var(--color-surface-raised)",
+                        color: "var(--color-foreground-muted)",
+                        fontSize: "0.6875rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Désélectionner
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toast.info(
+                          "L'ajout au projet sera disponible lorsque le constructeur de projets sera prêt.",
+                        );
+                      }}
+                      style={{
+                        height: "32px",
+                        padding: "0 0.75rem",
+                        borderRadius: "0.5rem",
+                        border: "1px solid rgba(93, 184, 58, 0.3)",
+                        background: "rgba(93, 184, 58, 0.12)",
+                        color: "#5DB83A",
+                        fontSize: "0.6875rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Ajouter au projet
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div
                 style={{
                   padding: "0.875rem 1.25rem",
@@ -950,7 +1093,8 @@ export default function QuestionBankPage() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "minmax(280px, 1fr) 180px 120px 48px",
+                  gridTemplateColumns:
+                    "38px minmax(280px, 1fr) 180px 120px 48px",
                   gap: "1rem",
                   padding: "0.75rem 1.25rem",
                   borderBottom: "1px solid var(--color-border)",
@@ -961,6 +1105,21 @@ export default function QuestionBankPage() {
                   color: "var(--color-foreground-muted)",
                 }}
               >
+                <div>
+                  <input
+                    type="checkbox"
+                    checked={allVisibleQuestionsSelected}
+                    onChange={() => {
+                      if (allVisibleQuestionsSelected) {
+                        deselectVisibleQuestions();
+                      } else {
+                        selectVisibleQuestions();
+                      }
+                    }}
+                    aria-label="Sélectionner les questions visibles"
+                  />
+                </div>
+
                 <div>Question</div>
                 <div>Type</div>
                 <div>Statut</div>
@@ -985,13 +1144,26 @@ export default function QuestionBankPage() {
                     setOpenMenuId(null);
                     setDuplicateQuestionId(item.id);
                   }}
+                  onArchive={() => {
+                    setOpenMenuId(null);
+
+                    const confirmed = window.confirm(
+                      `Voulez-vous vraiment archiver « ${item.name} » ?`,
+                    );
+
+                    if (!confirmed) {
+                      return;
+                    }
+
+                    archiveMutation.mutate(item.id);
+                  }}
                   onManageGroups={() => {
                     setOpenMenuId(null);
                     setMembershipQuestionId(item.id);
                   }}
-                  onArchive={() => {
-                    setOpenMenuId(null);
-                    archiveMutation.mutate(item.id);
+                  selected={selectedQuestionIds.has(item.id)}
+                  onToggleSelection={() => {
+                    toggleQuestionSelection(item.id);
                   }}
                 />
               ))}
@@ -1173,6 +1345,8 @@ function QuestionRow({
   onDuplicate,
   onArchive,
   onManageGroups,
+  selected,
+  onToggleSelection,
 }: {
   item: QuestionDefinition;
   menuOpen: boolean;
@@ -1181,26 +1355,51 @@ function QuestionRow({
   onDuplicate: () => void;
   onArchive: () => void;
   onManageGroups: () => void;
+  selected: boolean;
+  onToggleSelection: () => void;
 }) {
   return (
     <div
       style={{
         position: "relative",
         display: "grid",
-        gridTemplateColumns: "minmax(280px, 1fr) 180px 120px 48px",
+        gridTemplateColumns: "38px minmax(280px, 1fr) 180px 120px 48px",
         gap: "1rem",
         alignItems: "center",
         padding: "0.875rem 1.25rem",
         borderBottom: "1px solid var(--color-border)",
         transition: "background 0.15s ease",
+        background: selected ? "rgba(93, 184, 58, 0.055)" : "transparent",
       }}
       onMouseEnter={(event) => {
-        event.currentTarget.style.background = "var(--color-surface-raised)";
+        event.currentTarget.style.background = selected
+          ? "rgba(93, 184, 58, 0.09)"
+          : "var(--color-surface-raised)";
       }}
       onMouseLeave={(event) => {
-        event.currentTarget.style.background = "transparent";
+        event.currentTarget.style.background = selected
+          ? "rgba(93, 184, 58, 0.055)"
+          : "transparent";
       }}
     >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelection}
+          aria-label={`Sélectionner ${item.name}`}
+        />
+      </div>
+
       <div
         style={{
           minWidth: 0,
