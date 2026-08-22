@@ -1,0 +1,287 @@
+@import "tailwindcss";
+
+@theme {
+  /* ─── Palette SWT Servey — issue du logo ─────────────────────────────────── */
+  --color-brand-green: #5db83a;
+  --color-brand-blue: #0ea5e9;
+  --color-brand-green-light: #7dd44e;
+  --color-brand-blue-light: #38bdf8;
+
+  /* ─── Fond — bleu nuit profond ──────────────────────────────────────────── */
+  --color-background: #060d12;
+  --color-surface: #0a1520;
+  --color-surface-raised: #0f1f2e;
+  --color-surface-overlay: #152638;
+
+  /* ─── Texte ──────────────────────────────────────────────────────────────── */
+  --color-foreground: #e8f4fd;
+  --color-foreground-muted: #64839a;
+  --color-foreground-subtle: #3a5a72;
+
+  /* ─── Bordures ───────────────────────────────────────────────────────────── */
+  --color-border: #152638;
+  --color-border-light: #1e3448;
+
+  /* ─── États ─────────────────────────────────────────────────────────────── */
+  --color-success: #5db83a;
+  --color-error: #f43f5e;
+  --color-warning: #f59e0b;
+
+  /* ─── Alias pour compatibilité Tailwind ──────────────────────────────────── */
+  --color-primary: #5db83a;
+  --color-primary-light: #7dd44e;
+  --color-accent: #0ea5e9;
+  --color-accent-light: #38bdf8;
+  --color-muted: #0f1f2e;
+  --color-muted-foreground: #64839a;
+  --color-card: #0a1520;
+  --color-border-color: #152638;
+  --color-destructive: #f43f5e;
+
+  /* ─── Typographie ────────────────────────────────────────────────────────── */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Space Mono", monospace;
+
+  /* ─── Radius ─────────────────────────────────────────────────────────────── */
+  --radius: 0.875rem;
+}
+
+/* ─── Mode light ─────────────────────────────────────────────────────────────*/
+.light {
+  --color-background: #f0f7ff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f8fcff;
+  --color-surface-overlay: #ebf5ff;
+  --color-foreground: #0a1520;
+  --color-foreground-muted: #4a6a82;
+  --color-foreground-subtle: #8aaec6;
+  --color-border: #d4e8f5;
+  --color-border-light: #e8f4fd;
+  --color-card: #ffffff;
+  --color-muted: #ebf5ff;
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────────*/
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  /* margin: 0;
+  padding: 0; */
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────*/
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-light);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground-subtle);
+}
+
+::selection {
+  background: rgb(93 184 58 / 0.25);
+  color: var(--color-foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-green);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLASSES UTILITAIRES — identité visuelle SWT Servey
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Gradient de marque — vert → bleu */
+.brand-gradient {
+  background: linear-gradient(135deg, #5db83a 0%, #0ea5e9 100%);
+}
+
+/* Texte avec gradient de marque */
+.brand-gradient-text {
+  background: linear-gradient(135deg, #5db83a 0%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow vert */
+.glow-green {
+  box-shadow:
+    0 0 24px rgb(93 184 58 / 0.35),
+    0 0 48px rgb(93 184 58 / 0.12);
+}
+
+/* Glow bleu */
+.glow-blue {
+  box-shadow:
+    0 0 24px rgb(14 165 233 / 0.35),
+    0 0 48px rgb(14 165 233 / 0.12);
+}
+
+/* Glow dégradé sur le bouton principal */
+.glow-brand {
+  box-shadow:
+    0 0 20px rgb(93 184 58 / 0.3),
+    0 0 60px rgb(14 165 233 / 0.15),
+    inset 0 1px 0 rgb(255 255 255 / 0.15);
+}
+
+/* Grille de points — fond caractéristique */
+.dot-grid {
+  background-image: radial-gradient(
+    circle,
+    rgb(21 38 56 / 0.8) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
+/* Grille de coordonnées — élément signature de la plateforme terrain */
+.coord-grid {
+  background-image:
+    linear-gradient(rgb(93 184 58 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(93 184 58 / 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Bande brillante (shimmer) sur les cartes */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgb(255 255 255 / 0.04) 50%,
+    transparent 60%
+  );
+  animation: shimmerMove 3s ease-in-out infinite;
+}
+
+/* ─── Keyframes ──────────────────────────────────────────────────────────────*/
+@keyframes shimmerMove {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+  66% {
+    transform: translateY(-4px) rotate(-1deg);
+  }
+}
+
+@keyframes pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(93 184 58 / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgb(93 184 58 / 0);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gradient-x {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
