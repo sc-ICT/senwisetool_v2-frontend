@@ -111,11 +111,3 @@ export interface QuestionDefinitionUpdate {
   description?: string | null;
   status?: QuestionDefinitionStatus;
 }
-
-export interface QuestionVersionCreate {
-  label: string;
-  help_text: string | null;
-  question_type: QuestionType;
-  base_config: Record<string, unknown>;
-  options: QuestionOptionCreate[];
-}

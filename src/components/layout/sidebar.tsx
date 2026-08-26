@@ -33,10 +33,14 @@ const NAV = [
     type: "link" as const,
   },
   {
-    label: "Formulaires",
+    label: "Projets",
     icon: FileText,
     type: "group" as const,
     children: [
+      {
+        href: "/dashboard/projects",
+        label: "Projets",
+      },
       {
         href: "/dashboard/question-bank",
         label: "Banque de questions",
