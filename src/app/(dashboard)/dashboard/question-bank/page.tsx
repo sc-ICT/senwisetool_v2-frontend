@@ -373,7 +373,6 @@ export default function QuestionBankPage() {
       });
 
       toast.success("Nouvelle version créée avec succès.");
-      console.log("Succes", _response);
     },
 
     onError: (error) => {
@@ -385,7 +384,7 @@ export default function QuestionBankPage() {
             : "Impossible de créer la version.";
 
       toast.error(message);
-      console.log("error", error);
+      // console.log("error", error);
     },
   });
 

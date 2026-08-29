@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/common";
-import {
+import type { FileNode, ProjectFilesResponse } from "@/types/file-system";
+import type {
   Project,
   ProjectCreate,
   ProjectListResponse,
@@ -33,5 +34,30 @@ export const projectService = {
 
   async archive(projectId: number): Promise<ApiResponse<Project>> {
     return api.patch<Project>(`/projects/${projectId}/archive`);
+  },
+
+  async delete(projectId: number): Promise<void> {
+    await api.delete(`/projects/${projectId}`);
+  },
+
+  async listFiles(
+    projectId: number,
+  ): Promise<ApiResponse<ProjectFilesResponse>> {
+    return api.get<ProjectFilesResponse>(`/projects/${projectId}/files`);
+  },
+
+  async uploadFile(
+    projectId: number,
+    file: File,
+  ): Promise<ApiResponse<FileNode>> {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    return api.upload<FileNode>(`/projects/${projectId}/files`, formData);
+  },
+
+  async deleteFile(projectId: number, fileId: number): Promise<void> {
+    await api.delete(`/projects/${projectId}/files/${fileId}`);
   },
 };

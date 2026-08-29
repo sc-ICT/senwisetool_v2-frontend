@@ -4,7 +4,7 @@ import { ProjectCreateDialog } from "@/components/form-builder/project-create-di
 import { Header } from "@/components/layout/header";
 import { ApiError } from "@/lib/api";
 import { projectService } from "@/services/project.service";
-import type { Project, ProjectGlobalConfig } from "@/types/project";
+import type { Project } from "@/types/project";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
@@ -61,18 +61,14 @@ export default function ProjectsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: {
-      code: string;
       name: string;
       description: string | null;
       projectType: string;
-      globalConfig: ProjectGlobalConfig;
     }) => {
       return projectService.create({
-        code: data.code,
         name: data.name,
         description: data.description,
         project_type: data.projectType,
-        global_config: data.globalConfig,
       });
     },
 

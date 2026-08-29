@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  BookOpen,
   FolderKanban,
   Loader2,
   MoreVertical,
@@ -11,11 +12,15 @@ import {
   Save,
   Settings2,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { FormImportDialog } from "@/components/form-builder/form-import-dialog";
+import { FormImportDocumentationDialog } from "@/components/form-builder/form-import-documentation-dialog";
+import { ProjectGlobalConfigPanel } from "@/components/form-builder/project-global-config-panel";
 import { ProjectQuestionConfigDialog } from "@/components/form-builder/project-question-config-dialog";
 import { ProjectQuestionDependencyDialog } from "@/components/form-builder/project-question-dependency-dialog";
 import { ProjectQuestionPicker } from "@/components/form-builder/project-question-picker";
@@ -45,7 +50,14 @@ export default function ProjectDetailPage() {
 
   const [isEditing, setIsEditing] = useState(false);
 
+  const [isGlobalConfigOpen, setIsGlobalConfigOpen] = useState(false);
+
   const [isSectionCreateOpen, setIsSectionCreateOpen] = useState(false);
+
+  const [isFormImportOpen, setIsFormImportOpen] = useState(false);
+
+  const [isFormImportDocumentationOpen, setIsFormImportDocumentationOpen] =
+    useState(false);
 
   const [openSectionMenuId, setOpenSectionMenuId] = useState<number | null>(
     null,
@@ -170,6 +182,39 @@ export default function ProjectDetailPage() {
           : error instanceof Error
             ? error.message
             : "Impossible de modifier le projet.";
+
+      toast.error(message);
+    },
+  });
+
+  const updateGlobalConfigMutation = useMutation({
+    mutationFn: async (globalConfig: Project["global_config"]) => {
+      return projectService.update(projectId, {
+        global_config: globalConfig,
+      });
+    },
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["projects", "detail", projectId],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["projects"],
+      });
+
+      setIsGlobalConfigOpen(false);
+
+      toast.success("Paramètres globaux enregistrés.");
+    },
+
+    onError: (error) => {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Impossible d'enregistrer les paramètres globaux.";
 
       toast.error(message);
     },
@@ -617,6 +662,40 @@ export default function ProjectDetailPage() {
               Projets
             </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setIsFormImportOpen(true);
+              }}
+              style={secondaryButtonStyle}
+            >
+              <Upload size={15} />
+              Importer Excel
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsFormImportDocumentationOpen(true);
+              }}
+              style={secondaryButtonStyle}
+              title="Comment préparer mon fichier Excel ?"
+            >
+              <BookOpen size={15} />
+              Guide import
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsGlobalConfigOpen(true);
+              }}
+              style={secondaryButtonStyle}
+            >
+              <Settings2 size={15} />
+              Paramètres
+            </button>
+
             {!isEditing && (
               <button
                 type="button"
@@ -684,34 +763,6 @@ export default function ProjectDetailPage() {
                 />
               </div>
             </div>
-          </section>
-
-          {/* Configuration globale */}
-          <section style={cardStyle}>
-            <SectionHeader
-              icon={<Settings2 size={17} color="#0EA5E9" />}
-              title="Paramètres globaux"
-              description="Valeurs par défaut utilisées par le projet."
-            />
-
-            <GlobalConfigPreview project={project} />
-
-            {isEditing && (
-              <div
-                style={{
-                  marginTop: "1rem",
-                  padding: "0.875rem",
-                  borderRadius: "0.625rem",
-                  background: "var(--color-surface-raised)",
-                  border: "1px solid var(--color-border)",
-                  fontSize: "0.75rem",
-                  color: "var(--color-foreground-muted)",
-                }}
-              >
-                L&#39;édition détaillée des paramètres globaux sera intégrée
-                dans l&#39;étape suivante.
-              </div>
-            )}
           </section>
 
           {/* Structure */}
@@ -1066,9 +1117,28 @@ export default function ProjectDetailPage() {
         />
       )}
 
+      {isGlobalConfigOpen && (
+        <ProjectGlobalConfigPanel
+          projectId={projectId}
+          config={project.global_config}
+          isPending={updateGlobalConfigMutation.isPending}
+          onClose={() => setIsGlobalConfigOpen(false)}
+          onSubmit={(config) => updateGlobalConfigMutation.mutate(config)}
+          onSaveConfig={async (config) => {
+            try {
+              await updateGlobalConfigMutation.mutateAsync(config);
+              return true;
+            } catch {
+              return false;
+            }
+          }}
+        />
+      )}
+
       {configuringDependenciesFor && (
         <ProjectQuestionDependencyDialog
           projectId={projectId}
+          sections={sections}
           sectionId={configuringDependenciesFor.section_id}
           targetQuestion={configuringDependenciesFor}
           allQuestions={dependencyQuestions}
@@ -1086,6 +1156,36 @@ export default function ProjectDetailPage() {
             });
           }}
         />
+      )}
+
+      {isFormImportOpen && (
+        <FormImportDialog
+          projectId={projectId}
+          onClose={() => {
+            setIsFormImportOpen(false);
+          }}
+          onImported={() => {
+            void queryClient.invalidateQueries({
+              queryKey: ["project-sections", projectId],
+            });
+
+            void queryClient.invalidateQueries({
+              queryKey: ["project-questions", projectId],
+            });
+
+            toast.success("Le formulaire a été importé avec succès.");
+          }}
+        />
+      )}
+
+      {isFormImportDocumentationOpen && (
+        <div>
+          <FormImportDocumentationDialog
+            onClose={() => {
+              setIsFormImportDocumentationOpen(false);
+            }}
+          />
+        </div>
       )}
     </>
   );
@@ -1178,89 +1278,6 @@ function InfoField({ label, value }: { label: string; value: string }) {
           fontSize: "0.8125rem",
           color: "var(--color-foreground)",
           wordBreak: "break-word",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function GlobalConfigPreview({ project }: { project: Project }) {
-  const config = project.global_config;
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "0.75rem",
-      }}
-    >
-      <ConfigValue
-        label="Géolocalisation"
-        value={config.geolocation.enabled ? "Activée" : "Désactivée"}
-      />
-
-      <ConfigValue
-        label="Précision GPS"
-        value={
-          config.geolocation.accuracy !== null
-            ? `${config.geolocation.accuracy} m`
-            : "Par défaut"
-        }
-      />
-
-      <ConfigValue
-        label="Anti-fraude"
-        value={config.anti_fraud.enabled ? "Activée" : "Désactivée"}
-      />
-
-      <ConfigValue
-        label="Collecte hors ligne"
-        value={config.offline.enabled ? "Autorisée" : "Désactivée"}
-      />
-
-      <ConfigValue
-        label="Photos"
-        value={config.media.allow_photo ? "Autorisées" : "Interdites"}
-      />
-
-      <ConfigValue
-        label="Vidéos"
-        value={config.media.allow_video ? "Autorisées" : "Interdites"}
-      />
-    </div>
-  );
-}
-
-function ConfigValue({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        padding: "0.75rem",
-        borderRadius: "0.625rem",
-        background: "var(--color-surface-raised)",
-        border: "1px solid var(--color-border)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "0.625rem",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          color: "var(--color-foreground-muted)",
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          marginTop: "0.3rem",
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          color: "var(--color-foreground)",
         }}
       >
         {value}

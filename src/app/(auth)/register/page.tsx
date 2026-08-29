@@ -156,7 +156,6 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
       });
-      console.log("response", response);
 
       toast.success("Compte créé ! Vérifiez votre e-mail.", { duration: 6000 });
       router.push("/login");

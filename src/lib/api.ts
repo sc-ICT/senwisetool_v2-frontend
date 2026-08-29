@@ -161,6 +161,17 @@ export const api = {
       ...options,
     }),
 
+  put: <T>(
+    path: string,
+    body?: unknown,
+    options?: ApiRequestOptions,
+  ): Promise<ApiResponse<T>> =>
+    requestJson<T>(path, {
+      method: "PUT",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      ...options,
+    }),
+
   delete: <T>(
     path: string,
     options?: ApiRequestOptions,

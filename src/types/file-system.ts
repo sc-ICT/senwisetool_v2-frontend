@@ -31,3 +31,8 @@ export interface RenameFileNodeRequest {
 export interface MoveFileNodeRequest {
   parent_id: number | null;
 }
+
+export interface ProjectFilesResponse {
+  items: FileNode[];
+  count: number;
+}
