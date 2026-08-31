@@ -82,12 +82,28 @@ async function requestJson<T>(
     await extractApiError(response);
   }
 
+  /*
+   * Certains endpoints, notamment DELETE, peuvent
+   * retourner 204 No Content. Dans ce cas, il n'y a
+   * aucun JSON à parser.
+   */
+  if (response.status === 204) {
+    return undefined as unknown as ApiResponse<T>;
+  }
+
   const json = await response.json();
 
   if (!json.success) {
-    const message = json.message ?? json.detail ?? "Une erreur est survenue";
+    const message =
+      json.message ??
+      json.detail ??
+      "Une erreur est survenue";
 
-    throw new ApiError(message, response.status, json);
+    throw new ApiError(
+      message,
+      response.status,
+      json,
+    );
   }
 
   return json as ApiResponse<T>;

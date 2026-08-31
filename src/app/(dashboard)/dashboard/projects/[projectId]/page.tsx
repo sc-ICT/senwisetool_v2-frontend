@@ -1126,9 +1126,21 @@ export default function ProjectDetailPage() {
           onSubmit={(config) => updateGlobalConfigMutation.mutate(config)}
           onSaveConfig={async (config) => {
             try {
-              await updateGlobalConfigMutation.mutateAsync(config);
+              await projectService.update(projectId, {
+                global_config: config,
+              });
+
+              await queryClient.invalidateQueries({
+                queryKey: ["projects", "detail", projectId],
+              });
+
               return true;
-            } catch {
+            } catch (error) {
+              console.error(
+                "Erreur lors de la sauvegarde automatique de la configuration",
+                error,
+              );
+
               return false;
             }
           }}

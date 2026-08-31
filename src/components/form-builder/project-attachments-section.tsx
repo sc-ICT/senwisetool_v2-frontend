@@ -8,7 +8,6 @@ import {
   FileText,
   FileVideo,
   Loader2,
-  Paperclip,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -91,6 +90,7 @@ export function ProjectAttachmentsSection({
   );
   const [deletingFileId, setDeletingFileId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [startUploadFile, setStartUploadFile] = useState<boolean>(false);
 
   const loadFiles = useCallback(async () => {
     if (!enabled || isLoading) {
@@ -145,6 +145,7 @@ export function ProjectAttachmentsSection({
         return;
       }
 
+      setStartUploadFile(true);
       void handleUpload(file);
     };
 
@@ -153,6 +154,7 @@ export function ProjectAttachmentsSection({
 
   const handleUpload = async (file: File) => {
     if (disabled || !enabled) {
+      setStartUploadFile(false);
       return;
     }
 
@@ -160,6 +162,7 @@ export function ProjectAttachmentsSection({
       const canUpload = await onBeforeUpload();
 
       if (!canUpload) {
+        setStartUploadFile(false);
         return;
       }
     }
@@ -184,6 +187,7 @@ export function ProjectAttachmentsSection({
 
       setError(`Impossible d'ajouter le fichier « ${file.name} ».`);
     } finally {
+      setStartUploadFile(false);
       setUploadingFileName(null);
     }
   };
@@ -229,86 +233,9 @@ export function ProjectAttachmentsSection({
         display: "flex",
         flexDirection: "column",
         gap: "0.75rem",
+        paddingLeft: "2.5rem",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-          }}
-        >
-          <Paperclip size={16} />
-
-          <div>
-            <div
-              style={{
-                fontSize: "0.8125rem",
-                fontWeight: 600,
-              }}
-            >
-              Fichiers du projet
-            </div>
-
-            <div
-              style={{
-                marginTop: "0.125rem",
-                fontSize: "0.75rem",
-                color: "var(--color-foreground-muted)",
-              }}
-            >
-              Les fichiers sont conservés dans le dossier du projet.
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => void handleSelectFile()}
-          disabled={disabled || uploadingFileName !== null}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.375rem",
-            padding: "0.45rem 0.7rem",
-            border: "1px solid var(--color-border)",
-            borderRadius: "0.375rem",
-            background: "var(--color-background)",
-            color: "var(--color-foreground)",
-            cursor:
-              disabled || uploadingFileName !== null ? "default" : "pointer",
-            opacity: disabled || uploadingFileName !== null ? 0.6 : 1,
-            fontSize: "0.75rem",
-            fontWeight: 500,
-          }}
-        >
-          {uploadingFileName ? (
-            <>
-              <Loader2
-                size={14}
-                style={{
-                  animation: "spin 1s linear infinite",
-                }}
-              />
-              Ajout...
-            </>
-          ) : (
-            <>
-              <Upload size={14} />
-              Ajouter un fichier
-            </>
-          )}
-        </button>
-      </div>
-
       {error && (
         <div
           role="alert"
@@ -376,106 +303,179 @@ export function ProjectAttachmentsSection({
           Aucun fichier attaché à ce projet.
         </div>
       ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.5rem",
-          }}
-        >
-          {files.map((file) => (
+        <div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1rem",
+              marginTop: "0.2rem",
+              marginBottom: "0.5rem",
+            }}
+          >
             <div
-              key={file.id}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.75rem",
-                padding: "0.625rem 0.75rem",
-                border: "1px solid var(--color-border)",
-                borderRadius: "0.5rem",
+                gap: "0.5rem",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  width: "2rem",
-                  height: "2rem",
-                  borderRadius: "0.375rem",
-                  background: "var(--color-muted)",
-                }}
-              >
-                {getFileIcon(file)}
-              </div>
-
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    fontSize: "0.8125rem",
-                    fontWeight: 500,
-                  }}
-                  title={file.name}
-                >
-                  {file.name}
-                </div>
-
+              <div>
                 <div
                   style={{
                     marginTop: "0.125rem",
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: "var(--color-foreground-muted)",
                   }}
                 >
-                  {formatFileSize(file.size)}
+                  Les fichiers sont conservés dans le dossier du projet.
                 </div>
               </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => void handleDelete(file)}
-                disabled={disabled || deletingFileId === file.id}
-                title="Supprimer"
-                aria-label={`Supprimer ${file.name}`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "2rem",
-                  height: "2rem",
-                  border: "none",
-                  borderRadius: "0.375rem",
-                  background: "transparent",
-                  color: "var(--color-destructive)",
-                  cursor:
-                    disabled || deletingFileId === file.id
-                      ? "default"
-                      : "pointer",
-                  opacity: disabled || deletingFileId === file.id ? 0.5 : 1,
-                }}
-              >
-                {deletingFileId === file.id ? (
+            <button
+              type="button"
+              onClick={() => void handleSelectFile()}
+              disabled={disabled || uploadingFileName !== null}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.375rem",
+                padding: "0.45rem 0.7rem",
+                border: "1px solid var(--color-border)",
+                borderRadius: "0.375rem",
+                background: "var(--color-background)",
+                color: "var(--color-foreground)",
+                cursor:
+                  disabled || uploadingFileName !== null
+                    ? "default"
+                    : "pointer",
+                opacity: disabled || uploadingFileName !== null ? 0.6 : 1,
+                fontSize: "0.75rem",
+                fontWeight: 500,
+              }}
+            >
+              {uploadingFileName || startUploadFile ? (
+                <>
                   <Loader2
-                    size={15}
+                    size={14}
                     style={{
                       animation: "spin 1s linear infinite",
                     }}
                   />
-                ) : (
-                  <Trash2 size={15} />
-                )}
-              </button>
-            </div>
-          ))}
+                  Upload...
+                </>
+              ) : (
+                <>
+                  <Upload size={14} />
+                  Upload
+                </>
+              )}
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+            }}
+          >
+            {files.map((file) => (
+              <div
+                key={file.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  padding: "0.625rem 0.75rem",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "0.5rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    width: "2rem",
+                    height: "2rem",
+                    borderRadius: "0.375rem",
+                    background: "var(--color-muted)",
+                  }}
+                >
+                  {getFileIcon(file)}
+                </div>
+
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      fontSize: "0.8125rem",
+                      fontWeight: 500,
+                    }}
+                    title={file.name}
+                  >
+                    {file.name}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "0.125rem",
+                      fontSize: "0.6875rem",
+                      color: "var(--color-foreground-muted)",
+                    }}
+                  >
+                    {formatFileSize(file.size)}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(file)}
+                  disabled={disabled || deletingFileId === file.id}
+                  title="Supprimer"
+                  aria-label={`Supprimer ${file.name}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "2rem",
+                    height: "2rem",
+                    border: "none",
+                    borderRadius: "0.375rem",
+                    background: "transparent",
+                    color: "var(--color-destructive)",
+                    cursor:
+                      disabled || deletingFileId === file.id
+                        ? "default"
+                        : "pointer",
+                    opacity: disabled || deletingFileId === file.id ? 0.5 : 1,
+                  }}
+                >
+                  {deletingFileId === file.id ? (
+                    <Loader2
+                      size={15}
+                      style={{
+                        animation: "spin 1s linear infinite",
+                      }}
+                    />
+                  ) : (
+                    <Trash2 size={15} />
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

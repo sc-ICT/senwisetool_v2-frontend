@@ -665,6 +665,7 @@ export function ProjectGlobalConfigPanel({
 
           {/* MEDIA */}
           <ConfigSectionHeader
+            // eslint-disable-next-line jsx-a11y/alt-text
             icon={<Image size={16} />}
             title="Médias"
             description="Types de médias autorisés dans les collectes."
@@ -675,6 +676,7 @@ export function ProjectGlobalConfigPanel({
           {openSections.media && (
             <div style={sectionContentStyle}>
               <ToggleRow
+                // eslint-disable-next-line jsx-a11y/alt-text
                 icon={<Image size={15} />}
                 label="Photos"
                 checked={localConfig.media.allow_photo}
@@ -898,7 +900,7 @@ function ConfigSectionHeader({
         gap: "0.625rem",
         padding: "0.8rem 0.5rem",
         border: 0,
-        borderBottom: "1px solid var(--color-border)",
+        borderTop: "1px solid var(--color-border)",
         background: "transparent",
         color: "var(--color-foreground)",
         textAlign: "left",
@@ -969,8 +971,7 @@ function ToggleRow({
         alignItems: "center",
         gap: "0.625rem",
         minHeight: "52px",
-        padding: "0.5rem 0",
-        borderBottom: "1px solid var(--color-border)",
+        padding: "0rem 0 0.2rem 2.5rem",
       }}
     >
       {icon && (
@@ -995,7 +996,7 @@ function ToggleRow({
         <div
           style={{
             fontSize: "0.6875rem",
-            fontWeight: 600,
+            fontWeight: 500,
             color: "var(--color-foreground)",
           }}
         >
