@@ -1,3 +1,4 @@
+import { AgentBulkDelete } from "@/types/agent";
 import type { ApiResponse } from "@/types/common";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -94,16 +95,9 @@ async function requestJson<T>(
   const json = await response.json();
 
   if (!json.success) {
-    const message =
-      json.message ??
-      json.detail ??
-      "Une erreur est survenue";
+    const message = json.message ?? json.detail ?? "Une erreur est survenue";
 
-    throw new ApiError(
-      message,
-      response.status,
-      json,
-    );
+    throw new ApiError(message, response.status, json);
   }
 
   return json as ApiResponse<T>;
@@ -190,12 +184,18 @@ export const api = {
 
   delete: <T>(
     path: string,
+    body?: unknown,
     options?: ApiRequestOptions,
   ): Promise<ApiResponse<T>> =>
     requestJson<T>(path, {
       method: "DELETE",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
       ...options,
     }),
+
+  async deleteMany(payload: AgentBulkDelete): Promise<ApiResponse<null>> {
+    return api.delete<null>("/agents/bulk", payload);
+  },
 
   upload: <T>(
     path: string,

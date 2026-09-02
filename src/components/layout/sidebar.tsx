@@ -14,6 +14,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   LogOut,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -76,6 +77,13 @@ const NAV: NavItem[] = [
     href: "/dashboard/projects",
     icon: FolderKanban,
     label: "Projets",
+    exact: false,
+    type: "link",
+  },
+  {
+    href: "/dashboard/agents",
+    icon: Users,
+    label: "Agents",
     exact: false,
     type: "link",
   },
