@@ -32,7 +32,7 @@ export interface MoveFileNodeRequest {
   parent_id: number | null;
 }
 
-export interface ProjectFilesResponse {
+export interface FormFilesResponse {
   items: FileNode[];
   count: number;
 }

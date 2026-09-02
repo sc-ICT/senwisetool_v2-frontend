@@ -70,7 +70,7 @@ export interface DependencyAction {
   config: Record<string, unknown>;
 }
 
-export interface ProjectQuestionDependency {
+export interface FormQuestionDependency {
   id: number;
 
   target_question_id: number;
@@ -84,7 +84,7 @@ export interface ProjectQuestionDependency {
   created_at?: string;
 }
 
-export interface ProjectQuestionDependencyCreate {
+export interface FormQuestionDependencyCreate {
   condition: DependencyConditionGroup;
 
   actions_if_true: DependencyAction[];
@@ -92,50 +92,50 @@ export interface ProjectQuestionDependencyCreate {
   actions_if_false: DependencyAction[];
 }
 
-export const projectQuestionDependencyService = {
+export const formQuestionDependencyService = {
   async list(
-    projectId: number,
+    formId: number,
     sectionId: number,
     targetQuestionId: number,
-  ): Promise<ApiResponse<ProjectQuestionDependency[]>> {
-    return api.get<ProjectQuestionDependency[]>(
-      `/projects/${projectId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies`,
+  ): Promise<ApiResponse<FormQuestionDependency[]>> {
+    return api.get<FormQuestionDependency[]>(
+      `/forms/${formId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies`,
     );
   },
 
   async create(
-    projectId: number,
+    formId: number,
     sectionId: number,
     targetQuestionId: number,
-    payload: ProjectQuestionDependencyCreate,
-  ): Promise<ApiResponse<ProjectQuestionDependency>> {
-    return api.post<ProjectQuestionDependency>(
-      `/projects/${projectId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies`,
+    payload: FormQuestionDependencyCreate,
+  ): Promise<ApiResponse<FormQuestionDependency>> {
+    return api.post<FormQuestionDependency>(
+      `/forms/${formId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies`,
       payload,
     );
   },
 
   async update(
-    projectId: number,
+    formId: number,
     sectionId: number,
     targetQuestionId: number,
     dependencyId: number,
-    payload: ProjectQuestionDependencyCreate,
-  ): Promise<ApiResponse<ProjectQuestionDependency>> {
-    return api.put<ProjectQuestionDependency>(
-      `/projects/${projectId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies/${dependencyId}`,
+    payload: FormQuestionDependencyCreate,
+  ): Promise<ApiResponse<FormQuestionDependency>> {
+    return api.put<FormQuestionDependency>(
+      `/forms/${formId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies/${dependencyId}`,
       payload,
     );
   },
 
   async delete(
-    projectId: number,
+    formId: number,
     sectionId: number,
     targetQuestionId: number,
     dependencyId: number,
   ): Promise<ApiResponse<null>> {
     return api.delete<null>(
-      `/projects/${projectId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies/${dependencyId}`,
+      `/forms/${formId}/sections/${sectionId}/questions/${targetQuestionId}/dependencies/${dependencyId}`,
     );
   },
 };

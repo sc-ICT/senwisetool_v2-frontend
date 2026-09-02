@@ -1,4 +1,4 @@
-import type { ProjectQuestionConfig } from "@/types/project-question";
+import type { FormQuestionConfig } from "@/types/form-question";
 import type { QuestionType } from "@/types/question-bank";
 
 export type QuestionConfigCapability =
@@ -114,7 +114,7 @@ export function hasQuestionCapability(
   return questionTypeCapabilities[questionType].includes(capability);
 }
 
-export const defaultProjectQuestionConfig: ProjectQuestionConfig = {
+export const defaultFormQuestionConfig: FormQuestionConfig = {
   validation: {
     required: false,
     min_value: null,
@@ -132,14 +132,14 @@ export const defaultProjectQuestionConfig: ProjectQuestionConfig = {
   },
 };
 
-export function createDefaultProjectQuestionConfig(): ProjectQuestionConfig {
+export function createDefaultFormQuestionConfig(): FormQuestionConfig {
   return {
     validation: {
-      ...defaultProjectQuestionConfig.validation,
+      ...defaultFormQuestionConfig.validation,
     },
 
     display: {
-      ...defaultProjectQuestionConfig.display,
+      ...defaultFormQuestionConfig.display,
     },
   };
 }

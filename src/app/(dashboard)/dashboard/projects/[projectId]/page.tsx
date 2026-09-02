@@ -1,202 +1,131 @@
 "use client";
 
+import { FormCreateDialog } from "@/components/form-builder/form-create-dialog";
+import { Header } from "@/components/layout/header";
+import { ProjectGlobalConfigPanel } from "@/components/project/project-global-config-panel";
+import { ApiError } from "@/lib/api";
+import { formService } from "@/services/form.service";
+import { projectService } from "@/services/project.service";
+import type { Form } from "@/types/form";
+import type { Project } from "@/types/project";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
-  BookOpen,
+  FileText,
   FolderKanban,
   Loader2,
-  MoreVertical,
-  Pencil,
   Plus,
-  Save,
-  Settings2,
-  Trash2,
-  Upload,
+  RefreshCw,
+  Search,
+  Settings,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { FormImportDialog } from "@/components/form-builder/form-import-dialog";
-import { FormImportDocumentationDialog } from "@/components/form-builder/form-import-documentation-dialog";
-import { ProjectGlobalConfigPanel } from "@/components/form-builder/project-global-config-panel";
-import { ProjectQuestionConfigDialog } from "@/components/form-builder/project-question-config-dialog";
-import { ProjectQuestionDependencyDialog } from "@/components/form-builder/project-question-dependency-dialog";
-import { ProjectQuestionPicker } from "@/components/form-builder/project-question-picker";
-import { ProjectSectionCreateDialog } from "@/components/form-builder/project-section-create-dialog";
-import { ProjectSectionQuestions } from "@/components/form-builder/project-section-questions";
-import { Header } from "@/components/layout/header";
-import { ApiError } from "@/lib/api";
-import { createDefaultProjectQuestionConfig } from "@/lib/form-builder/question-config";
-import { projectQuestionService } from "@/services/project-question.service";
-import { projectSectionService } from "@/services/project-section.service";
-import { projectService } from "@/services/project.service";
-import { questionBankService } from "@/services/question-bank.service";
-import type { Project } from "@/types/project";
-import {
-  ProjectQuestion,
-  ProjectQuestionConfig,
-} from "@/types/project-question";
-import { ProjectSection } from "@/types/project-section";
-
 export default function ProjectDetailPage() {
-  const router = useRouter();
   const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const projectId = Number(params.projectId);
 
-  const queryClient = useQueryClient();
+  /* ------------------------------------------------------------------------ */
+  /* État local                                                               */
+  /* ------------------------------------------------------------------------ */
 
-  const [isEditing, setIsEditing] = useState(false);
-
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isGlobalConfigOpen, setIsGlobalConfigOpen] = useState(false);
 
-  const [isSectionCreateOpen, setIsSectionCreateOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [includeArchived, setIncludeArchived] = useState(false);
 
-  const [isFormImportOpen, setIsFormImportOpen] = useState(false);
-
-  const [isFormImportDocumentationOpen, setIsFormImportDocumentationOpen] =
-    useState(false);
-
-  const [openSectionMenuId, setOpenSectionMenuId] = useState<number | null>(
-    null,
-  );
-
-  const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
-
-  const [draggedSectionId, setDraggedSectionId] = useState<number | null>(null);
-
-  const [dragOverSectionId, setDragOverSectionId] = useState<number | null>(
-    null,
-  );
-
-  const [questionPickerSectionId, setQuestionPickerSectionId] = useState<
-    number | null
-  >(null);
-
-  const [questionPickerExistingIds, setQuestionPickerExistingIds] = useState<
-    number[]
-  >([]);
-
-  const [deletingProjectQuestionId, setDeletingProjectQuestionId] = useState<
-    number | null
-  >(null);
-
-  const [configuringQuestion, setConfiguringQuestion] =
-    useState<ProjectQuestion | null>(null);
-
-  const [configuringDependenciesFor, setConfiguringDependenciesFor] =
-    useState<ProjectQuestion | null>(null);
+  /* ------------------------------------------------------------------------ */
+  /* Projet                                                                    */
+  /* ------------------------------------------------------------------------ */
 
   const {
-    data: dependencyQuestionsData,
-    isLoading: dependencyQuestionsLoading,
+    data: projectData,
+    isLoading: isProjectLoading,
+    error: projectError,
+    refetch: refetchProject,
   } = useQuery({
-    queryKey: [
-      "project-questions",
-      projectId,
-      configuringDependenciesFor?.section_id ?? "none",
-    ],
+    queryKey: ["project", projectId],
 
     queryFn: async () => {
-      if (configuringDependenciesFor === null) {
-        return null;
-      }
-
-      const response = await projectQuestionService.list(
-        projectId,
-        configuringDependenciesFor.section_id,
-      );
-
-      return response.data;
-    },
-
-    enabled: configuringDependenciesFor !== null && projectId > 0,
-  });
-
-  const dependencyQuestions = dependencyQuestionsData?.items ?? [];
-
-  const {
-    data: project,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["projects", "detail", projectId],
-
-    queryFn: async () => {
-      if (!Number.isInteger(projectId) || projectId <= 0) {
-        throw new Error("Identifiant de projet invalide.");
-      }
-
       const response = await projectService.get(projectId);
 
       return response.data;
     },
 
-    enabled: Number.isInteger(projectId) && projectId > 0,
+    enabled: Number.isFinite(projectId),
   });
 
-  const { data: sectionsData, isLoading: sectionsLoading } = useQuery({
-    queryKey: ["project-sections", projectId],
+  const project = projectData as Project | undefined;
+
+  /* ------------------------------------------------------------------------ */
+  /* Formulaires du projet                                                    */
+  /* ------------------------------------------------------------------------ */
+
+  const {
+    data: formsData,
+    isLoading: isFormsLoading,
+    isFetching: isFormsFetching,
+    error: formsError,
+    refetch: refetchForms,
+  } = useQuery({
+    queryKey: ["project-forms", projectId, includeArchived],
 
     queryFn: async () => {
-      const response = await projectSectionService.list(projectId);
+      const response = await projectService.listForms(
+        projectId,
+        includeArchived,
+      );
 
       return response.data;
     },
 
-    enabled: Number.isInteger(projectId) && projectId > 0,
+    enabled: Number.isFinite(projectId),
   });
 
-  const sections = sectionsData?.items ?? [];
+  const forms = useMemo(() => formsData?.items ?? [], [formsData]);
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: Partial<Project>) => {
-      return projectService.update(projectId, {
-        name: data.name,
-        description: data.description,
-        project_type: data.project_type,
-        global_config: data.global_config,
-      });
-    },
+  /* ------------------------------------------------------------------------ */
+  /* Recherche                                                                 */
+  /* ------------------------------------------------------------------------ */
 
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["projects"],
-      });
+  const filteredForms = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
 
-      await queryClient.invalidateQueries({
-        queryKey: ["projects", "detail", projectId],
-      });
+    if (!query) {
+      return forms;
+    }
 
-      setIsEditing(false);
+    return forms.filter(
+      (form) =>
+        form.name.toLocaleLowerCase().includes(query) ||
+        form.code.toLocaleLowerCase().includes(query) ||
+        form.form_type.toLocaleLowerCase().includes(query),
+    );
+  }, [forms, searchQuery]);
 
-      toast.success("Projet modifié avec succès.");
-    },
+  /* ------------------------------------------------------------------------ */
+  /* Mutation : configuration globale du projet                              */
+  /* ------------------------------------------------------------------------ */
 
-    onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible de modifier le projet.";
-
-      toast.error(message);
-    },
-  });
-
-  const updateGlobalConfigMutation = useMutation({
+  const updateProjectConfigMutation = useMutation({
     mutationFn: async (globalConfig: Project["global_config"]) => {
       return projectService.update(projectId, {
         global_config: globalConfig,
       });
     },
 
-    onSuccess: async () => {
+    onSuccess: async (response) => {
+      if (response.data) {
+        queryClient.setQueryData(["project", projectId], response.data);
+      }
+
       await queryClient.invalidateQueries({
-        queryKey: ["projects", "detail", projectId],
+        queryKey: ["project", projectId],
       });
 
       await queryClient.invalidateQueries({
@@ -205,7 +134,9 @@ export default function ProjectDetailPage() {
 
       setIsGlobalConfigOpen(false);
 
-      toast.success("Paramètres globaux enregistrés.");
+      toast.success(
+        response.message || "Paramètres du projet enregistrés avec succès.",
+      );
     },
 
     onError: (error) => {
@@ -214,29 +145,143 @@ export default function ProjectDetailPage() {
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Impossible d'enregistrer les paramètres globaux.";
+            : "Impossible d'enregistrer les paramètres du projet.";
 
       toast.error(message);
     },
   });
 
-  const createSectionMutation = useMutation({
+  /* ------------------------------------------------------------------------ */
+  /* Mutation : publication du projet                                        */
+  /* ------------------------------------------------------------------------ */
+
+  const publishProjectMutation = useMutation({
+    mutationFn: async () => projectService.publish(projectId),
+
+    onSuccess: async (response) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["project", projectId],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["projects"],
+      });
+
+      toast.success(response.message || "Projet publié avec succès.");
+    },
+
+    onError: (error) => {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Impossible de publier le projet.";
+
+      toast.error(message);
+    },
+  });
+
+  /* ------------------------------------------------------------------------ */
+  /* Mutation : archivage du projet                                           */
+  /* ------------------------------------------------------------------------ */
+
+  const archiveProjectMutation = useMutation({
+    mutationFn: async () => projectService.archive(projectId),
+
+    onSuccess: async (response) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["project", projectId],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["projects"],
+      });
+
+      toast.success(response.message || "Projet archivé avec succès.");
+    },
+
+    onError: (error) => {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Impossible d'archiver le projet.";
+
+      toast.error(message);
+    },
+  });
+
+  /* ------------------------------------------------------------------------ */
+  /* Mutation : Restauration du projet                                           */
+  /* ------------------------------------------------------------------------ */
+
+  const restoreProjectToDraftMutation = useMutation({
+    mutationFn: async () => projectService.restoreToDraft(projectId),
+
+    onSuccess: async (response) => {
+      if (response.data) {
+        queryClient.setQueryData(["project", projectId], response.data);
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey: ["project", projectId],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["projects"],
+      });
+
+      toast.success(
+        response.message || "Projet remis en brouillon avec succès.",
+      );
+    },
+
+    onError: (error) => {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Impossible de remettre le projet en brouillon.";
+
+      toast.error(message);
+    },
+  });
+
+  /* ------------------------------------------------------------------------ */
+  /* Mutation : création d'un formulaire dans le projet                       */
+  /* ------------------------------------------------------------------------ */
+
+  const createFormMutation = useMutation({
     mutationFn: async (data: {
       name: string;
       description: string | null;
-      config: Record<string, unknown>;
+      formType: string;
     }) => {
-      return projectSectionService.create(projectId, data);
+      return formService.create({
+        name: data.name,
+        description: data.description,
+        form_type: data.formType,
+
+        // Le formulaire est automatiquement rattaché au projet.
+        project_id: projectId,
+      });
     },
 
-    onSuccess: async () => {
+    onSuccess: async (response) => {
       await queryClient.invalidateQueries({
-        queryKey: ["project-sections", projectId],
+        queryKey: ["project-forms", projectId],
       });
 
-      setIsSectionCreateOpen(false);
+      await queryClient.invalidateQueries({
+        queryKey: ["forms"],
+      });
 
-      toast.success("Section créée avec succès.");
+      setIsCreateOpen(false);
+
+      toast.success(response.message || "Formulaire créé avec succès.");
     },
 
     onError: (error) => {
@@ -245,467 +290,286 @@ export default function ProjectDetailPage() {
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Impossible de créer la section.";
+            : "Impossible de créer le formulaire.";
 
       toast.error(message);
     },
   });
 
-  const updateSectionMutation = useMutation({
-    mutationFn: async ({
-      sectionId,
-      name,
-      description,
-    }: {
-      sectionId: number;
-      name: string;
-      description: string | null;
-    }) => {
-      return projectSectionService.update(projectId, sectionId, {
-        name,
-        description,
-      });
-    },
-
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["project-sections", projectId],
-      });
-
-      setEditingSectionId(null);
-
-      toast.success("Section modifiée avec succès.");
-    },
-
-    onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible de modifier la section.";
-
-      toast.error(message);
-    },
-  });
-
-  const deleteSectionMutation = useMutation({
-    mutationFn: async (sectionId: number) => {
-      return projectSectionService.delete(projectId, sectionId);
-    },
-
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["project-sections", projectId],
-      });
-
-      setOpenSectionMenuId(null);
-
-      toast.success("Section supprimée avec succès.");
-    },
-
-    onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible de supprimer la section.";
-
-      toast.error(message);
-    },
-  });
-
-  const reorderSectionsMutation = useMutation({
-    mutationFn: async (orderedSectionIds: number[]) => {
-      return projectSectionService.reorder(projectId, orderedSectionIds);
-    },
-
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["project-sections", projectId],
-      });
-
-      setDraggedSectionId(null);
-      setDragOverSectionId(null);
-
-      toast.success("Ordre des sections mis à jour.");
-    },
-
-    onError: (error) => {
-      setDraggedSectionId(null);
-      setDragOverSectionId(null);
-
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible de réordonner les sections.";
-
-      toast.error(message);
-    },
-  });
-
-  const deleteProjectQuestionMutation = useMutation({
-    mutationFn: async ({
-      sectionId,
-      questionId,
-    }: {
-      sectionId: number;
-      questionId: number;
-    }) => {
-      return projectQuestionService.delete(projectId, sectionId, questionId);
-    },
-
-    onMutate: ({ questionId }) => {
-      setDeletingProjectQuestionId(questionId);
-    },
-
-    onSuccess: async (_response, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["project-questions", projectId, variables.sectionId],
-      });
-
-      setDeletingProjectQuestionId(null);
-
-      toast.success("Question retirée du projet.");
-    },
-
-    onError: (error) => {
-      setDeletingProjectQuestionId(null);
-
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible de retirer la question.";
-
-      toast.error(message);
-    },
-  });
-
-  const addProjectQuestionsMutation = useMutation({
-    mutationFn: async ({
-      sectionId,
-      questions,
-    }: {
-      sectionId: number;
-      questions: Array<{
-        questionDefinitionId: number;
-        questionVersionId: number;
-      }>;
-    }) => {
-      for (const question of questions) {
-        await projectQuestionService.create(projectId, sectionId, {
-          question_definition_id: question.questionDefinitionId,
-
-          question_version_id: question.questionVersionId,
-
-          config: createDefaultProjectQuestionConfig(),
-        });
-      }
-    },
-
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["project-questions", projectId, variables.sectionId],
-      });
-
-      setQuestionPickerSectionId(null);
-
-      toast.success(
-        `${variables.questions.length} question${
-          variables.questions.length > 1 ? "s" : ""
-        } ajoutée${variables.questions.length > 1 ? "s" : ""} au projet.`,
-      );
-    },
-
-    onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible d'ajouter les questions.";
-
-      toast.error(message);
-    },
-  });
-
-  const reorderProjectQuestionsMutation = useMutation({
-    mutationFn: async ({
-      sectionId,
-      orderedQuestionIds,
-    }: {
-      sectionId: number;
-      orderedQuestionIds: number[];
-    }) => {
-      return projectQuestionService.reorder(
-        projectId,
-        sectionId,
-        orderedQuestionIds,
-      );
-    },
-
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["project-questions", projectId, variables.sectionId],
-      });
-
-      toast.success("Ordre des questions mis à jour.");
-    },
-
-    onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible de réordonner les questions.";
-
-      toast.error(message);
-    },
-  });
-
-  const updateProjectQuestionMutation = useMutation({
-    mutationFn: async ({
-      question,
-      config,
-    }: {
-      question: ProjectQuestion;
-      config: ProjectQuestionConfig;
-    }) => {
-      return projectQuestionService.update(
-        projectId,
-        question.section_id,
-        question.id,
-        {
-          config,
-        },
-      );
-    },
-
-    onSuccess: async (_response, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: [
-          "project-questions",
-          projectId,
-          variables.question.section_id,
-        ],
-      });
-
-      setConfiguringQuestion(null);
-
-      toast.success("Configuration de la question enregistrée.");
-    },
-
-    onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Impossible d'enregistrer la configuration.";
-
-      toast.error(message);
-    },
-  });
-
-  const moveProjectQuestion = (
-    sectionId: number,
-    draggedId: number,
-    targetId: number,
-  ) => {
-    if (draggedId === targetId || reorderProjectQuestionsMutation.isPending) {
-      return;
-    }
-
-    const currentQuestions = queryClient.getQueryData<{
-      items: ProjectQuestion[];
-      count: number;
-    }>(["project-questions", projectId, sectionId]);
-
-    if (!currentQuestions) {
-      return;
-    }
-
-    const reordered = currentQuestions.items.map((question) => question.id);
-
-    const fromIndex = reordered.indexOf(draggedId);
-
-    const toIndex = reordered.indexOf(targetId);
-
-    if (fromIndex === -1 || toIndex === -1) {
-      return;
-    }
-
-    const [movedId] = reordered.splice(fromIndex, 1);
-
-    reordered.splice(toIndex, 0, movedId);
-
-    reorderProjectQuestionsMutation.mutate({
-      sectionId,
-      orderedQuestionIds: reordered,
-    });
-  };
-
-  const moveSection = (draggedId: number, targetId: number) => {
-    if (draggedId === targetId || reorderSectionsMutation.isPending) {
-      return;
-    }
-
-    const reordered = sections.map((section) => section.id);
-
-    const fromIndex = reordered.indexOf(draggedId);
-
-    const toIndex = reordered.indexOf(targetId);
-
-    if (fromIndex === -1 || toIndex === -1) {
-      return;
-    }
-
-    const [movedId] = reordered.splice(fromIndex, 1);
-
-    reordered.splice(toIndex, 0, movedId);
-
-    reorderSectionsMutation.mutate(reordered);
-  };
-
-  if (isLoading) {
+  /* ------------------------------------------------------------------------ */
+  /* Chargement du projet                                                     */
+  /* ------------------------------------------------------------------------ */
+
+  if (isProjectLoading) {
     return (
-      <>
-        <Header title="Projet" description="Chargement..." />
-
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Loader2 size={24} className="animate-spin" />
-        </div>
-      </>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Loader2 size={24} className="animate-spin" />
+      </div>
     );
   }
 
-  if (error || !project) {
+  /* ------------------------------------------------------------------------ */
+  /* Projet introuvable                                                       */
+  /* ------------------------------------------------------------------------ */
+
+  if (projectError || !project) {
     return (
-      <>
-        <Header title="Projet" description="Impossible de charger le projet." />
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "1rem",
+          padding: "2rem",
+        }}
+      >
+        <FolderKanban size={32} />
 
         <div
           style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.75rem",
-            padding: "2rem",
-            textAlign: "center",
+            fontSize: "0.875rem",
+            color: "var(--color-foreground-muted)",
           }}
         >
-          <div
-            style={{
-              fontSize: "0.9375rem",
-              fontWeight: 600,
-            }}
-          >
-            Impossible de charger le projet
-          </div>
-
-          <div
-            style={{
-              fontSize: "0.8125rem",
-              color: "var(--color-foreground-muted)",
-            }}
-          >
-            {error instanceof ApiError
-              ? error.message
-              : error instanceof Error
-                ? error.message
-                : "Projet introuvable."}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard/projects")}
-            style={secondaryButtonStyle}
-          >
-            <ArrowLeft size={15} />
-            Retour aux projets
-          </button>
+          Impossible de récupérer ce projet.
         </div>
-      </>
+
+        <button
+          type="button"
+          onClick={() => {
+            void refetchProject();
+          }}
+          style={{
+            height: "36px",
+            padding: "0 0.875rem",
+            borderRadius: "0.625rem",
+            border: "1px solid var(--color-border)",
+            background: "var(--color-surface-raised)",
+            color: "var(--color-foreground)",
+            cursor: "pointer",
+          }}
+        >
+          Réessayer
+        </button>
+      </div>
     );
   }
+
+  /* ------------------------------------------------------------------------ */
+  /* Rendu                                                                    */
+  /* ------------------------------------------------------------------------ */
 
   return (
     <>
       <Header
         title={project.name}
-        description={project.description ?? project.code}
+        description={
+          project.description ||
+          "Gérez les formulaires et les ressources de ce projet."
+        }
+        backTo="/dashboard/projects"
         actions={
           <>
             <button
               type="button"
               onClick={() => {
-                router.push("/dashboard/projects");
-              }}
-              style={secondaryButtonStyle}
-            >
-              <ArrowLeft size={15} />
-              Projets
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsFormImportOpen(true);
-              }}
-              style={secondaryButtonStyle}
-            >
-              <Upload size={15} />
-              Importer Excel
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsFormImportDocumentationOpen(true);
-              }}
-              style={secondaryButtonStyle}
-              title="Comment préparer mon fichier Excel ?"
-            >
-              <BookOpen size={15} />
-              Guide import
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
                 setIsGlobalConfigOpen(true);
               }}
-              style={secondaryButtonStyle}
+              style={{
+                height: "36px",
+                padding: "0 0.875rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                borderRadius: "0.625rem",
+                border: "1px solid var(--color-border)",
+                background: "var(--color-surface-raised)",
+                color: "var(--color-foreground)",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
             >
-              <Settings2 size={15} />
+              <Settings size={15} />
               Paramètres
             </button>
 
-            {!isEditing && (
+            {project.status === "DRAFT" && (
               <button
                 type="button"
-                onClick={() => setIsEditing(true)}
-                style={primaryButtonStyle}
+                onClick={() => {
+                  publishProjectMutation.mutate();
+                }}
+                disabled={publishProjectMutation.isPending}
+                style={{
+                  height: "36px",
+                  padding: "0 0.875rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                  borderRadius: "0.625rem",
+                  border: "1px solid rgba(93, 184, 58, 0.25)",
+                  background: "rgba(93, 184, 58, 0.1)",
+                  color: "#5DB83A",
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  cursor: publishProjectMutation.isPending
+                    ? "not-allowed"
+                    : "pointer",
+                  opacity: publishProjectMutation.isPending ? 0.6 : 1,
+                }}
               >
-                <Pencil size={15} />
-                Modifier
+                {publishProjectMutation.isPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  "Publier"
+                )}
               </button>
             )}
+
+            {project.status === "PUBLISHED" && (
+              <button
+                type="button"
+                onClick={() => {
+                  archiveProjectMutation.mutate();
+                }}
+                disabled={archiveProjectMutation.isPending}
+                style={{
+                  height: "36px",
+                  padding: "0 0.875rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                  borderRadius: "0.625rem",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-surface-raised)",
+                  color: "var(--color-foreground)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  cursor: archiveProjectMutation.isPending
+                    ? "not-allowed"
+                    : "pointer",
+                  opacity: archiveProjectMutation.isPending ? 0.6 : 1,
+                }}
+              >
+                {archiveProjectMutation.isPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  "Archiver"
+                )}
+              </button>
+            )}
+
+            {(project.status === "PUBLISHED" ||
+              project.status === "ARCHIVED") && (
+              <button
+                type="button"
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    `Voulez-vous remettre « ${project.name} » en brouillon ?`,
+                  );
+
+                  if (!confirmed) {
+                    return;
+                  }
+
+                  restoreProjectToDraftMutation.mutate();
+                }}
+                disabled={restoreProjectToDraftMutation.isPending}
+                style={{
+                  height: "36px",
+                  padding: "0 0.875rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                  borderRadius: "0.625rem",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-surface-raised)",
+                  color: "var(--color-foreground)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  cursor: restoreProjectToDraftMutation.isPending
+                    ? "not-allowed"
+                    : "pointer",
+                  opacity: restoreProjectToDraftMutation.isPending ? 0.6 : 1,
+                }}
+              >
+                {restoreProjectToDraftMutation.isPending ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    Restauration...
+                  </>
+                ) : (
+                  "Remettre en brouillon"
+                )}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreateOpen(true);
+              }}
+              style={{
+                height: "36px",
+                padding: "0 0.875rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                borderRadius: "0.625rem",
+                border: "1px solid rgba(93, 184, 58, 0.25)",
+                background: "rgba(93, 184, 58, 0.1)",
+                color: "#5DB83A",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Plus size={16} />
+              Nouveau formulaire
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                void refetchForms();
+              }}
+              disabled={isFormsFetching}
+              title="Actualiser"
+              style={{
+                width: "36px",
+                height: "36px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "0.625rem",
+                border: "1px solid var(--color-border)",
+                background: "var(--color-surface-raised)",
+                color: "var(--color-foreground-muted)",
+                cursor: isFormsFetching ? "not-allowed" : "pointer",
+                opacity: isFormsFetching ? 0.6 : 1,
+              }}
+            >
+              {isFormsFetching ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+            </button>
           </>
         }
       />
@@ -717,568 +581,275 @@ export default function ProjectDetailPage() {
           padding: "1.5rem",
         }}
       >
-        <div
+        {/* ---------------------------------------------------------------- */}
+        {/* Informations du projet                                          */}
+        {/* ---------------------------------------------------------------- */}
+
+        <section
           style={{
-            maxWidth: "1000px",
-            margin: "0 auto",
-            display: "flex",
-            flexDirection: "column",
+            marginBottom: "1.5rem",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: "1rem",
           }}
         >
-          {/* Informations */}
-          <section style={cardStyle}>
-            <SectionHeader
-              icon={<FolderKanban size={17} color="#5DB83A" />}
-              title="Informations générales"
-              description="Identité et type du projet."
-            />
+          <InfoCard label="Code" value={project.code} />
+          <InfoCard label="Type" value={project.project_type} />
+          <InfoCard label="Statut" value={project.status} />
+        </section>
 
+        {/* ---------------------------------------------------------------- */}
+        {/* Formulaires                                                      */}
+        {/* ---------------------------------------------------------------- */}
+
+        <section
+          style={{
+            border: "1px solid var(--color-border)",
+            borderRadius: "1rem",
+            background: "var(--color-surface)",
+          }}
+        >
+          {/* En-tête */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "1rem 1.25rem",
+              borderBottom: "1px solid var(--color-border)",
+            }}
+          >
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
               }}
             >
-              <InfoField label="Code" value={project.code} />
-
-              <InfoField
-                label="Statut"
-                value={getStatusLabel(project.status)}
-              />
-
-              <InfoField label="Nom" value={project.name} />
-
-              <InfoField label="Type" value={project.project_type} />
-
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                }}
-              >
-                <InfoField
-                  label="Description"
-                  value={project.description ?? "Aucune description."}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Structure */}
-          <section style={cardStyle}>
-            <SectionHeader
-              icon={<Settings2 size={17} color="#8B5CF6" />}
-              title="Structure du projet"
-              description="Construisez ici les sections et les questions de votre projet."
-            />
-
-            <div
-              style={{
-                marginTop: "0.25rem",
-              }}
-            >
-              <FolderKanban size={24} color="#8B5CF6" />
+              <FileText size={17} />
 
               <div>
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "1rem",
-                    marginBottom: "1rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 700,
                   }}
                 >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--color-foreground-muted)",
-                        position: "relative",
-                      }}
-                    >
-                      {sections.length} section
-                      {sections.length > 1 ? "s" : ""}
-                    </div>
-                    {reorderSectionsMutation.isPending && (
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.4rem",
-                          marginLeft: "0.625rem",
-                          padding: "0.625rem",
-                          fontSize: "0.6875rem",
-                          fontWeight: 600,
-                          color: "#FFF",
-                          background: "#5DB83A",
-                          borderRadius: 20,
-                          position: "absolute",
-                          bottom: 30,
-                          right: 30,
-                        }}
-                      >
-                        <Loader2 size={13} className="animate-spin" />
-                        Réorganisation...
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSectionCreateOpen(true);
-                    }}
-                    style={primaryButtonStyle}
-                  >
-                    <Plus size={15} />
-                    Ajouter une section
-                  </button>
+                  Formulaires
                 </div>
 
-                {sectionsLoading ? (
-                  <div
-                    style={{
-                      minHeight: "180px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Loader2 size={22} className="animate-spin" />
-                  </div>
-                ) : sections.length === 0 ? (
-                  <div
-                    style={{
-                      minHeight: "180px",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.625rem",
-                      border: "1px dashed var(--color-border)",
-                      borderRadius: "0.75rem",
-                      textAlign: "center",
-                      padding: "1.5rem",
-                    }}
-                  >
-                    <FolderKanban size={24} color="#8B5CF6" />
-
-                    <div
-                      style={{
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Aucune section
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--color-foreground-muted)",
-                      }}
-                    >
-                      Commencez par créer la première section de votre projet.
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.625rem",
-                    }}
-                  >
-                    {sections.map((section) => {
-                      const isEditing = editingSectionId === section.id;
-
-                      if (isEditing) {
-                        return (
-                          <ProjectSectionEditRow
-                            key={section.id}
-                            section={section}
-                            isPending={updateSectionMutation.isPending}
-                            onCancel={() => {
-                              if (!updateSectionMutation.isPending) {
-                                setEditingSectionId(null);
-                              }
-                            }}
-                            onSave={(name, description) => {
-                              updateSectionMutation.mutate({
-                                sectionId: section.id,
-                                name,
-                                description,
-                              });
-                            }}
-                          />
-                        );
-                      }
-
-                      return (
-                        <ProjectSectionRow
-                          key={section.id}
-                          section={section}
-                          menuOpen={openSectionMenuId === section.id}
-                          deletingQuestionId={deletingProjectQuestionId}
-                          projectId={projectId}
-                          deleting={
-                            deleteSectionMutation.isPending &&
-                            deleteSectionMutation.variables === section.id
-                          }
-                          reorderingQuestions={
-                            reorderProjectQuestionsMutation.isPending
-                          }
-                          onReorderQuestion={(draggedId, targetId) => {
-                            moveProjectQuestion(
-                              section.id,
-                              draggedId,
-                              targetId,
-                            );
-                          }}
-                          reordering={reorderSectionsMutation.isPending}
-                          dragged={draggedSectionId === section.id}
-                          dragOver={dragOverSectionId === section.id}
-                          onDragStart={() => {
-                            setDraggedSectionId(section.id);
-                            setOpenSectionMenuId(null);
-                          }}
-                          onDragEnd={() => {
-                            setDraggedSectionId(null);
-                            setDragOverSectionId(null);
-                          }}
-                          onDragOver={() => {
-                            if (draggedSectionId !== section.id) {
-                              setDragOverSectionId(section.id);
-                            }
-                          }}
-                          onDrop={() => {
-                            if (draggedSectionId === null) {
-                              return;
-                            }
-                            moveSection(draggedSectionId, section.id);
-                          }}
-                          onToggleMenu={() => {
-                            setOpenSectionMenuId((current) =>
-                              current === section.id ? null : section.id,
-                            );
-                          }}
-                          onEdit={() => {
-                            setOpenSectionMenuId(null);
-                            setEditingSectionId(section.id);
-                          }}
-                          onDelete={() => {
-                            const confirmed = window.confirm(
-                              `Voulez-vous vraiment supprimer « ${section.name} » ?`,
-                            );
-
-                            if (!confirmed) {
-                              return;
-                            }
-
-                            deleteSectionMutation.mutate(section.id);
-                          }}
-                          onAddQuestion={(existingQuestionIds) => {
-                            setQuestionPickerExistingIds(existingQuestionIds);
-
-                            setQuestionPickerSectionId(section.id);
-                          }}
-                          onDeleteQuestion={(question) => {
-                            const confirmed = window.confirm(
-                              `Voulez-vous retirer « ${question.question_name} » du projet ?`,
-                            );
-
-                            if (!confirmed) {
-                              return;
-                            }
-
-                            deleteProjectQuestionMutation.mutate({
-                              sectionId: section.id,
-                              questionId: question.id,
-                            });
-                          }}
-                          onConfigureQuestion={(question) => {
-                            setConfiguringQuestion(question);
-                          }}
-                          onDependencies={(question) => {
-                            setOpenSectionMenuId(null);
-                            setConfiguringDependenciesFor(question);
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
+                <div
+                  style={{
+                    marginTop: "0.2rem",
+                    fontSize: "0.7rem",
+                    color: "var(--color-foreground-muted)",
+                  }}
+                >
+                  {filteredForms.length} formulaire
+                  {filteredForms.length !== 1 ? "s" : ""}
+                </div>
               </div>
             </div>
-          </section>
-        </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "end",
+              }}
+            >
+              {/* Recherche */}
+              <div
+                style={{
+                  position: "relative",
+                  width: "320px",
+                  maxWidth: "40%",
+                }}
+              >
+                <Search
+                  size={15}
+                  style={{
+                    position: "absolute",
+                    left: "0.75rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--color-foreground-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                  }}
+                  placeholder="Rechercher un formulaire..."
+                  style={{
+                    width: "100%",
+                    height: "36px",
+                    padding: "0 0.75rem 0 2.25rem",
+                    borderRadius: "0.625rem",
+                    border: "1px solid var(--color-border)",
+                    background: "var(--color-surface-raised)",
+                    color: "var(--color-foreground)",
+                    outline: "none",
+                    fontSize: "0.75rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              {/* Filtres */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  paddingLeft: "1.25rem",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    fontSize: "0.75rem",
+                    color: "var(--color-foreground-muted)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={includeArchived}
+                    onChange={(event) => {
+                      setIncludeArchived(event.target.checked);
+                    }}
+                  />
+                  Afficher les archivés
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenu */}
+          {isFormsLoading ? (
+            <LoadingState />
+          ) : formsError ? (
+            <ErrorState
+              error={formsError}
+              onRetry={() => {
+                void refetchForms();
+              }}
+            />
+          ) : filteredForms.length === 0 ? (
+            <EmptyState
+              hasSearch={Boolean(searchQuery.trim())}
+              onCreate={() => {
+                setIsCreateOpen(true);
+              }}
+            />
+          ) : (
+            <div>
+              {/* En-tête du tableau */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(280px, 1fr) 200px 130px 110px",
+                  gap: "1rem",
+                  alignItems: "center",
+                  padding: "0.75rem 1.25rem",
+                  borderBottom: "1px solid var(--color-border)",
+                  fontSize: "0.6875rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  color: "var(--color-foreground-muted)",
+                }}
+              >
+                <div>Formulaire</div>
+                <div>Type</div>
+                <div>Statut</div>
+                <div>Créateur</div>
+              </div>
+
+              {filteredForms.map((form) => (
+                <FormRow
+                  key={form.id}
+                  form={form}
+                  onOpen={() => {
+                    router.push(
+                      `/dashboard/projects/${form.project_id}/forms/${form.id}`,
+                    );
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
-      {isEditing && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: "0.625rem",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setIsEditing(false)}
-            disabled={updateMutation.isPending}
-            style={secondaryButtonStyle}
-          >
-            Annuler
-          </button>
+      {/* ------------------------------------------------------------------ */}
+      {/* Création formulaire                                                */}
+      {/* ------------------------------------------------------------------ */}
 
-          <button
-            type="button"
-            onClick={() => {
-              if (!project.name.trim()) {
-                toast.error("Le nom du projet est obligatoire.");
-
-                return;
-              }
-
-              updateMutation.mutate({
-                name: project.name,
-                description: project.description,
-                project_type: project.project_type,
-                global_config: project.global_config,
-              });
-            }}
-            disabled={updateMutation.isPending}
-            style={primaryButtonStyle}
-          >
-            {updateMutation.isPending ? (
-              <>
-                <Loader2 size={15} className="animate-spin" />
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                <Save size={15} />
-                Enregistrer
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {isSectionCreateOpen && (
-        <ProjectSectionCreateDialog
-          isPending={createSectionMutation.isPending}
+      {isCreateOpen && (
+        <FormCreateDialog
+          isPending={createFormMutation.isPending}
           onClose={() => {
-            if (!createSectionMutation.isPending) {
-              setIsSectionCreateOpen(false);
+            if (!createFormMutation.isPending) {
+              setIsCreateOpen(false);
             }
           }}
           onSubmit={(data) => {
-            createSectionMutation.mutate(data);
+            createFormMutation.mutate(data);
           }}
         />
       )}
 
-      {questionPickerSectionId !== null && (
-        <ProjectQuestionPicker
-          isPending={addProjectQuestionsMutation.isPending}
-          existingQuestionIds={questionPickerExistingIds}
-          onClose={() => {
-            if (!addProjectQuestionsMutation.isPending) {
-              setQuestionPickerSectionId(null);
-            }
-          }}
-          onSubmit={(questions) => {
-            addProjectQuestionsMutation.mutate({
-              sectionId: questionPickerSectionId,
-              questions,
-            });
-          }}
-        />
-      )}
-
-      {configuringQuestion && (
-        <ProjectQuestionConfigDialog
-          question={configuringQuestion}
-          isPending={updateProjectQuestionMutation.isPending}
-          onClose={() => {
-            if (!updateProjectQuestionMutation.isPending) {
-              setConfiguringQuestion(null);
-            }
-          }}
-          onSubmit={(config) => {
-            updateProjectQuestionMutation.mutate({
-              question: configuringQuestion,
-              config,
-            });
-          }}
-        />
-      )}
+      {/* ------------------------------------------------------------------ */}
+      {/* Configuration globale du projet                                    */}
+      {/* ------------------------------------------------------------------ */}
 
       {isGlobalConfigOpen && (
         <ProjectGlobalConfigPanel
-          projectId={projectId}
+          projectFolderId={project.project_folder_id}
           config={project.global_config}
-          isPending={updateGlobalConfigMutation.isPending}
-          onClose={() => setIsGlobalConfigOpen(false)}
-          onSubmit={(config) => updateGlobalConfigMutation.mutate(config)}
-          onSaveConfig={async (config) => {
-            try {
-              await projectService.update(projectId, {
-                global_config: config,
-              });
-
-              await queryClient.invalidateQueries({
-                queryKey: ["projects", "detail", projectId],
-              });
-
-              return true;
-            } catch (error) {
-              console.error(
-                "Erreur lors de la sauvegarde automatique de la configuration",
-                error,
-              );
-
-              return false;
+          isPending={updateProjectConfigMutation.isPending}
+          onClose={() => {
+            if (!updateProjectConfigMutation.isPending) {
+              setIsGlobalConfigOpen(false);
             }
           }}
-        />
-      )}
-
-      {configuringDependenciesFor && (
-        <ProjectQuestionDependencyDialog
-          projectId={projectId}
-          sections={sections}
-          sectionId={configuringDependenciesFor.section_id}
-          targetQuestion={configuringDependenciesFor}
-          allQuestions={dependencyQuestions}
-          isPending={dependencyQuestionsLoading}
-          onClose={() => {
-            setConfiguringDependenciesFor(null);
-          }}
-          onChanged={() => {
-            void queryClient.invalidateQueries({
-              queryKey: [
-                "project-questions",
-                projectId,
-                configuringDependenciesFor.section_id,
-              ],
-            });
+          onSubmit={(globalConfig) => {
+            updateProjectConfigMutation.mutate(globalConfig);
           }}
         />
-      )}
-
-      {isFormImportOpen && (
-        <FormImportDialog
-          projectId={projectId}
-          onClose={() => {
-            setIsFormImportOpen(false);
-          }}
-          onImported={() => {
-            void queryClient.invalidateQueries({
-              queryKey: ["project-sections", projectId],
-            });
-
-            void queryClient.invalidateQueries({
-              queryKey: ["project-questions", projectId],
-            });
-
-            toast.success("Le formulaire a été importé avec succès.");
-          }}
-        />
-      )}
-
-      {isFormImportDocumentationOpen && (
-        <div>
-          <FormImportDocumentationDialog
-            onClose={() => {
-              setIsFormImportDocumentationOpen(false);
-            }}
-          />
-        </div>
       )}
     </>
   );
 }
 
-function SectionHeader({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
+/* ========================================================================== */
+/* Carte d'information                                                        */
+/* ========================================================================== */
+
+function InfoCard({ label, value }: { label: string; value: string }) {
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "0.625rem",
-        marginBottom: "1rem",
-      }}
-    >
-      <div
-        style={{
-          width: "32px",
-          height: "32px",
-          flexShrink: 0,
-          borderRadius: "0.5rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "var(--color-surface-raised)",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        {icon}
-      </div>
-
-      <div>
-        <div
-          style={{
-            fontSize: "0.8125rem",
-            fontWeight: 700,
-            color: "var(--color-foreground)",
-          }}
-        >
-          {title}
-        </div>
-
-        <div
-          style={{
-            marginTop: "0.2rem",
-            fontSize: "0.6875rem",
-            color: "var(--color-foreground-muted)",
-          }}
-        >
-          {description}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InfoField({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        padding: "0.75rem",
-        borderRadius: "0.625rem",
+        padding: "1rem",
         border: "1px solid var(--color-border)",
-        background: "var(--color-surface-raised)",
+        borderRadius: "0.875rem",
+        background: "var(--color-surface)",
       }}
     >
       <div
         style={{
-          fontSize: "0.625rem",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
+          marginBottom: "0.35rem",
+          fontSize: "0.6875rem",
+          fontWeight: 600,
           color: "var(--color-foreground-muted)",
+          textTransform: "uppercase",
         }}
       >
         {label}
@@ -1286,10 +857,9 @@ function InfoField({ label, value }: { label: string; value: string }) {
 
       <div
         style={{
-          marginTop: "0.3rem",
-          fontSize: "0.8125rem",
+          fontSize: "0.875rem",
+          fontWeight: 700,
           color: "var(--color-foreground)",
-          wordBreak: "break-word",
         }}
       >
         {value}
@@ -1298,606 +868,324 @@ function InfoField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function getStatusLabel(status: Project["status"]) {
-  switch (status) {
-    case "DRAFT":
-      return "Brouillon";
+/* ========================================================================== */
+/* Ligne formulaire                                                           */
+/* ========================================================================== */
 
-    case "PUBLISHED":
-      return "Publié";
-
-    case "ARCHIVED":
-      return "Archivé";
-
-    default:
-      return status;
-  }
-}
-
-function ProjectSectionContent({
-  projectId,
-  section,
-  deletingQuestionId,
-  reordering,
-  onAddQuestion,
-  onDeleteQuestion,
-  onReorder,
-  onConfigureQuestion,
-  onDependencies,
-}: {
-  projectId: number;
-  section: ProjectSection;
-  deletingQuestionId: number | null;
-  reordering: boolean;
-  onAddQuestion: (existingQuestionIds: number[]) => void;
-  onDeleteQuestion: (question: ProjectQuestion) => void;
-  onReorder: (draggedId: number, targetId: number) => void;
-  onConfigureQuestion: (question: ProjectQuestion) => void;
-  onDependencies: (question: ProjectQuestion) => void;
-}) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["project-questions", projectId, section.id],
-
-    queryFn: async () => {
-      const response = await projectQuestionService.list(projectId, section.id);
-
-      return response.data;
-    },
-  });
-
-  const { data: questionBankData } = useQuery({
-    queryKey: ["question-bank-picker"],
-
-    queryFn: async () => {
-      const response = await questionBankService.list(false);
-
-      return response.data;
-    },
-  });
-
-  const totalAvailableQuestions = questionBankData?.items.length ?? 0;
-
-  const questions = data?.items ?? [];
-
-  const existingQuestionIds = new Set(
-    questions.map((question) => question.question_definition_id),
-  );
-
-  const availableQuestionCount = Math.max(
-    0,
-    totalAvailableQuestions - existingQuestionIds.size,
-  );
-
-  return (
-    <ProjectSectionQuestions
-      questions={questions}
-      isLoading={isLoading}
-      deletingQuestionId={deletingQuestionId}
-      reordering={reordering}
-      onAdd={() => {
-        onAddQuestion(Array.from(existingQuestionIds));
-      }}
-      availableQuestionCount={availableQuestionCount}
-      onDelete={onDeleteQuestion}
-      onReorder={onReorder}
-      onConfigure={onConfigureQuestion}
-      onDependencies={onDependencies}
-    />
-  );
-}
-
-function ProjectSectionRow({
-  section,
-  menuOpen,
-  onToggleMenu,
-  onDelete,
-  onEdit,
-  deleting,
-  dragged,
-  dragOver,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
-  reordering,
-  deletingQuestionId,
-  projectId,
-  onAddQuestion,
-  onDeleteQuestion,
-  reorderingQuestions,
-  onReorderQuestion,
-  onConfigureQuestion,
-  onDependencies,
-}: {
-  section: ProjectSection;
-  menuOpen: boolean;
-  onToggleMenu: () => void;
-  onDelete: () => void;
-  onEdit: () => void;
-  deleting: boolean;
-  dragged: boolean;
-  dragOver: boolean;
-  reorderingQuestions: boolean;
-  onReorderQuestion: (draggedId: number, targetId: number) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-  onDragOver: () => void;
-  onDrop: () => void;
-  reordering: boolean;
-  deletingQuestionId: number | null;
-  projectId: number;
-  onAddQuestion: (existingQuestionIds: number[]) => void;
-  onDeleteQuestion: (question: ProjectQuestion) => void;
-  onConfigureQuestion: (question: ProjectQuestion) => void;
-  onDependencies: (question: ProjectQuestion) => void;
-}) {
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!menuOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-
-      if (
-        target instanceof Node &&
-        menuRef.current &&
-        !menuRef.current.contains(target)
-      ) {
-        onToggleMenu();
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [menuOpen, onToggleMenu]);
-
-  return (
-    <div
-      draggable={!deleting && !reordering}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move";
-
-        onDragStart();
-      }}
-      onDragOver={(event) => {
-        event.preventDefault();
-
-        event.dataTransfer.dropEffect = "move";
-
-        onDragOver();
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        onDrop();
-      }}
-      onDragEnd={onDragEnd}
-      style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.875rem",
-        padding: "0.875rem",
-        border: dragOver
-          ? "1px solid rgba(93, 184, 58, 0.45)"
-          : "1px solid var(--color-border)",
-        borderRadius: "0.875rem",
-        background: dragOver
-          ? "rgba(93, 184, 58, 0.06)"
-          : "var(--color-surface-raised)",
-        opacity: dragged ? 0.45 : 1,
-        transition:
-          "background 0.15s ease, border 0.15s ease, opacity 0.15s ease",
-      }}
-    >
-      {/* En-tête de la section */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.75rem",
-          minWidth: 0,
-        }}
-      >
-        {/* Poignée */}
-        <div
-          title="Déplacer la section"
-          style={{
-            width: "20px",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-foreground-muted)",
-            cursor: "grab",
-            fontSize: "14px",
-            userSelect: "none",
-          }}
-        >
-          ⋮⋮
-        </div>
-
-        {/* Icône */}
-        <div
-          style={{
-            width: "36px",
-            height: "36px",
-            flexShrink: 0,
-            borderRadius: "0.625rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(139, 92, 246, 0.08)",
-            border: "1px solid rgba(139, 92, 246, 0.15)",
-          }}
-        >
-          <FolderKanban size={17} color="#8B5CF6" />
-        </div>
-
-        {/* Infos */}
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              minWidth: 0,
-            }}
-          >
-            <span
-              style={{
-                minWidth: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                fontSize: "0.8125rem",
-                fontWeight: 700,
-                color: "var(--color-foreground)",
-              }}
-            >
-              {section.name}
-            </span>
-
-            <span
-              style={{
-                flexShrink: 0,
-                fontSize: "0.625rem",
-                padding: "0.2rem 0.45rem",
-                borderRadius: "999px",
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                color: "var(--color-foreground-muted)",
-              }}
-            >
-              Section {section.position + 1}
-            </span>
-          </div>
-
-          <div
-            style={{
-              marginTop: "0.15rem",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              fontSize: "0.6875rem",
-              color: "var(--color-foreground-muted)",
-            }}
-          >
-            {section.description ?? "Aucune description"}
-          </div>
-        </div>
-
-        {/* Menu */}
-        <div
-          ref={menuRef}
-          style={{
-            position: "relative",
-            flexShrink: 0,
-          }}
-        >
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleMenu();
-            }}
-            disabled={deleting}
-            style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "0.5rem",
-              border: "1px solid transparent",
-              background: menuOpen ? "var(--color-surface)" : "transparent",
-              color: "var(--color-foreground-muted)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: deleting ? "not-allowed" : "pointer",
-              opacity: deleting ? 0.5 : 1,
-            }}
-            aria-label={`Actions pour ${section.name}`}
-          >
-            {deleting ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <MoreVertical size={17} />
-            )}
-          </button>
-
-          {menuOpen && !deleting && (
-            <div
-              style={{
-                position: "absolute",
-                top: "calc(100% + 0.375rem)",
-                right: 0,
-                zIndex: 100,
-                minWidth: "180px",
-                padding: "0.375rem",
-                border: "1px solid var(--color-border)",
-                borderRadius: "0.75rem",
-                background: "var(--color-surface)",
-                boxShadow: "0 12px 32px rgba(0, 0, 0, 0.14)",
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-              }}
-            >
-              <SectionMenuButton
-                icon={<Pencil size={15} />}
-                label="Modifier"
-                onClick={onEdit}
-              />
-
-              <SectionMenuButton
-                icon={<Trash2 size={15} />}
-                label="Supprimer"
-                danger
-                onClick={onDelete}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Contenu des questions */}
-      <div
-        style={{
-          paddingLeft: "2.3rem",
-          paddingRight: "0.125rem",
-        }}
-      >
-        <ProjectSectionContent
-          projectId={projectId}
-          section={section}
-          deletingQuestionId={deletingQuestionId}
-          reordering={reorderingQuestions}
-          onAddQuestion={onAddQuestion}
-          onDeleteQuestion={onDeleteQuestion}
-          onReorder={onReorderQuestion}
-          onConfigureQuestion={onConfigureQuestion}
-          onDependencies={onDependencies}
-        />
-      </div>
-    </div>
-  );
-}
-
-function ProjectSectionEditRow({
-  section,
-  isPending,
-  onCancel,
-  onSave,
-}: {
-  section: ProjectSection;
-  isPending: boolean;
-  onCancel: () => void;
-  onSave: (name: string, description: string | null) => void;
-}) {
-  const [name, setName] = useState(section.name);
-
-  const [description, setDescription] = useState(section.description ?? "");
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.75rem",
-        padding: "0.875rem",
-        border: "1px solid rgba(93, 184, 58, 0.25)",
-        borderRadius: "0.75rem",
-        background: "rgba(93, 184, 58, 0.04)",
-      }}
-    >
-      <div>
-        <label style={fieldLabelStyle}>Nom</label>
-
-        <input
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-          }}
-          autoFocus
-          maxLength={255}
-          disabled={isPending}
-          // style={inputStyle}
-        />
-      </div>
-
-      <div>
-        <label style={fieldLabelStyle}>Description</label>
-
-        <textarea
-          value={description}
-          onChange={(event) => {
-            setDescription(event.target.value);
-          }}
-          rows={3}
-          disabled={isPending}
-          style={{
-            // ...inputStyle,
-            height: "auto",
-            minHeight: "72px",
-            padding: "0.75rem 0.875rem",
-            resize: "vertical",
-          }}
-        />
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "0.5rem",
-        }}
-      >
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isPending}
-          style={secondaryButtonStyle}
-        >
-          Annuler
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            const normalizedName = name.trim();
-
-            if (!normalizedName) {
-              toast.error("Le nom de la section est obligatoire.");
-              return;
-            }
-
-            onSave(
-              normalizedName,
-              description.trim() ? description.trim() : null,
-            );
-          }}
-          disabled={isPending}
-          style={{
-            ...primaryButtonStyle,
-            opacity: isPending ? 0.6 : 1,
-          }}
-        >
-          {isPending ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Enregistrement...
-            </>
-          ) : (
-            <>
-              <Save size={14} />
-              Enregistrer
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SectionMenuButton({
-  icon,
-  label,
-  onClick,
-  danger = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
+function FormRow({ form, onOpen }: { form: Form; onOpen: () => void }) {
   return (
     <button
       type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
+      onClick={onOpen}
       style={{
         width: "100%",
-        height: "36px",
-        border: 0,
-        borderRadius: "0.5rem",
-        background: "transparent",
-        color: danger ? "#EF4444" : "var(--color-foreground)",
-        display: "flex",
+        position: "relative",
+        display: "grid",
+        gridTemplateColumns: "minmax(280px, 1fr) 200px 130px 110px",
+        gap: "1rem",
         alignItems: "center",
-        gap: "0.625rem",
-        padding: "0 0.625rem",
-        fontSize: "0.75rem",
-        fontWeight: 500,
-        cursor: "pointer",
+        padding: "0.875rem 1.25rem",
+        border: "none",
+        borderBottom: "1px solid var(--color-border)",
+        background: "transparent",
+        color: "inherit",
         textAlign: "left",
+        transition: "background 0.15s ease",
+        cursor: "pointer",
       }}
       onMouseEnter={(event) => {
-        event.currentTarget.style.background = danger
-          ? "rgba(239, 68, 68, 0.08)"
-          : "var(--color-surface-raised)";
+        event.currentTarget.style.background = "var(--color-surface-raised)";
       }}
       onMouseLeave={(event) => {
         event.currentTarget.style.background = "transparent";
       }}
     >
-      {icon}
-      {label}
+      <div
+        style={{
+          minWidth: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+        }}
+      >
+        <div
+          style={{
+            width: "38px",
+            height: "38px",
+            flexShrink: 0,
+            borderRadius: "0.625rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(93, 184, 58, 0.08)",
+            border: "1px solid rgba(93, 184, 58, 0.16)",
+          }}
+        >
+          <FolderKanban size={17} color="#5DB83A" />
+        </div>
+
+        <div
+          style={{
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              color: "var(--color-foreground)",
+            }}
+          >
+            {form.name}
+          </div>
+
+          <div
+            style={{
+              marginTop: "0.125rem",
+              fontSize: "0.6875rem",
+              color: "var(--color-foreground-muted)",
+            }}
+          >
+            {form.code}
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          fontSize: "0.75rem",
+          color: "var(--color-foreground-muted)",
+        }}
+      >
+        {form.form_type}
+      </div>
+
+      <div>
+        <StatusBadge status={form.status} />
+      </div>
+
+      <div
+        style={{
+          fontSize: "0.75rem",
+          color: "var(--color-foreground-muted)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {form.created_by}
+      </div>
     </button>
   );
 }
 
-const cardStyle = {
-  padding: "1.125rem",
-  border: "1px solid var(--color-border)",
-  borderRadius: "1rem",
-  background: "var(--color-surface)",
-};
+/* ========================================================================== */
+/* Badge de statut                                                            */
+/* ========================================================================== */
 
-const secondaryButtonStyle = {
-  height: "36px",
-  padding: "0 0.75rem",
-  borderRadius: "0.5rem",
-  border: "1px solid var(--color-border)",
-  background: "var(--color-surface-raised)",
-  color: "var(--color-foreground)",
-  display: "flex",
-  alignItems: "center",
-  gap: "0.375rem",
-  fontSize: "0.75rem",
-  fontWeight: 600,
-  cursor: "pointer",
-};
+function StatusBadge({ status }: { status: Form["status"] }) {
+  const label =
+    status === "DRAFT"
+      ? "Brouillon"
+      : status === "PUBLISHED"
+        ? "Publié"
+        : "Archivé";
 
-const primaryButtonStyle = {
-  height: "36px",
-  padding: "0 0.75rem",
-  borderRadius: "0.5rem",
-  border: "1px solid rgba(93, 184, 58, 0.3)",
-  background: "rgba(93, 184, 58, 0.12)",
-  color: "#5DB83A",
-  display: "flex",
-  alignItems: "center",
-  gap: "0.375rem",
-  fontSize: "0.75rem",
-  fontWeight: 600,
-  cursor: "pointer",
-};
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        height: "24px",
+        padding: "0 0.5rem",
+        borderRadius: "999px",
+        background:
+          status === "DRAFT"
+            ? "rgba(148, 163, 184, 0.1)"
+            : status === "PUBLISHED"
+              ? "rgba(93, 184, 58, 0.1)"
+              : "rgba(148, 163, 184, 0.1)",
+        color:
+          status === "PUBLISHED" ? "#5DB83A" : "var(--color-foreground-muted)",
+        fontSize: "0.6875rem",
+        fontWeight: 600,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
 
-const fieldLabelStyle = {
-  display: "block",
-  marginBottom: "0.375rem",
-  fontSize: "0.6875rem",
-  fontWeight: 600,
-  color: "var(--color-foreground)",
-};
+/* ========================================================================== */
+/* Loading                                                                    */
+/* ========================================================================== */
+
+function LoadingState() {
+  return (
+    <div
+      style={{
+        minHeight: "320px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "var(--color-foreground-muted)",
+      }}
+    >
+      <Loader2 size={22} className="animate-spin" />
+    </div>
+  );
+}
+
+/* ========================================================================== */
+/* Erreur                                                                     */
+/* ========================================================================== */
+
+function ErrorState({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "320px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.75rem",
+        padding: "2rem",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "0.9375rem",
+          fontWeight: 600,
+        }}
+      >
+        Impossible de charger les formulaires
+      </div>
+
+      <div
+        style={{
+          fontSize: "0.8125rem",
+          color: "var(--color-foreground-muted)",
+        }}
+      >
+        {error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Une erreur est survenue."}
+      </div>
+
+      <button
+        type="button"
+        onClick={onRetry}
+        style={{
+          height: "36px",
+          padding: "0 0.875rem",
+          borderRadius: "0.625rem",
+          border: "1px solid var(--color-border)",
+          background: "var(--color-surface-raised)",
+          color: "var(--color-foreground)",
+          fontSize: "0.8125rem",
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        Réessayer
+      </button>
+    </div>
+  );
+}
+
+/* ========================================================================== */
+/* État vide                                                                  */
+/* ========================================================================== */
+
+function EmptyState({
+  hasSearch,
+  onCreate,
+}: {
+  hasSearch: boolean;
+  onCreate: () => void;
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "320px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.625rem",
+        padding: "2rem",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "52px",
+          height: "52px",
+          borderRadius: "0.875rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--color-surface-raised)",
+          border: "1px solid var(--color-border)",
+        }}
+      >
+        <FolderKanban size={22} color="#5DB83A" />
+      </div>
+
+      <div
+        style={{
+          fontSize: "0.9375rem",
+          fontWeight: 600,
+        }}
+      >
+        {hasSearch ? "Aucun résultat" : "Aucun formulaire"}
+      </div>
+
+      <div
+        style={{
+          fontSize: "0.8125rem",
+          color: "var(--color-foreground-muted)",
+          maxWidth: "460px",
+        }}
+      >
+        {hasSearch
+          ? "Aucun formulaire ne correspond à votre recherche."
+          : "Créez votre premier formulaire pour commencer à construire votre collecte."}
+      </div>
+
+      {!hasSearch && (
+        <button
+          type="button"
+          onClick={onCreate}
+          style={{
+            marginTop: "0.25rem",
+            height: "36px",
+            padding: "0 0.875rem",
+            borderRadius: "0.625rem",
+            border: "1px solid rgba(93, 184, 58, 0.25)",
+            background: "rgba(93, 184, 58, 0.1)",
+            color: "#5DB83A",
+            fontSize: "0.75rem",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Créer un formulaire
+        </button>
+      )}
+    </div>
+  );
+}

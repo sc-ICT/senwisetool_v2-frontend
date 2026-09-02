@@ -753,7 +753,7 @@ export default function QuestionBankPage() {
           ) : filteredItems.length === 0 ? (
             <div style={{ position: "relative" }}>
               <div style={{ position: "absolute", bottom: 30, right: 30 }}>
-                {!searchQuery && (
+                {!searchQuery && items.length > 0 && (
                   <GroupFilterButton
                     label="Nombre de groupe disponible:"
                     count={items.length}
@@ -910,7 +910,7 @@ export default function QuestionBankPage() {
                       type="button"
                       onClick={() => {
                         toast.info(
-                          "L'ajout au projet sera disponible lorsque le constructeur de projets sera prêt.",
+                          "L'ajout au formulaire sera disponible lorsque le constructeur de formulaires sera prêt.",
                         );
                       }}
                       style={{
@@ -925,7 +925,7 @@ export default function QuestionBankPage() {
                         cursor: "pointer",
                       }}
                     >
-                      Ajouter au projet
+                      Ajouter au formulaire
                     </button>
                   </div>
                 </div>

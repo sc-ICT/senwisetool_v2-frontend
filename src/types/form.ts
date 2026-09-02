@@ -1,6 +1,6 @@
-export type ProjectStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type FormStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
-export interface ProjectGlobalConfig {
+export interface FormGlobalConfig {
   collection: {
     require_all_questions: boolean;
   };
@@ -50,35 +50,35 @@ export interface ProjectGlobalConfig {
   };
 }
 
-export interface Project {
+export interface Form {
   id: number;
   code: string;
   name: string;
   description: string | null;
-  project_type: string;
-  status: ProjectStatus;
-  global_config: ProjectGlobalConfig;
-  project_folder_id: number | null;
-  parent_folder_id: number | null;
+  form_type: string;
+  status: FormStatus;
+  global_config: FormGlobalConfig;
+  project_id: number;
+  form_folder_id: number | null;
   created_by: number;
 }
 
-export interface ProjectListResponse {
-  items: Project[];
+export interface FormListResponse {
+  items: Form[];
   count: number;
 }
 
-export interface ProjectCreate {
+export interface FormCreate {
   name: string;
   description?: string | null;
-  project_type: string;
-  parent_folder_id?: number | null;
+  form_type: string;
+  project_id: number;
 }
 
-export interface ProjectUpdate {
+export interface FormUpdate {
   name?: string;
   description?: string | null;
-  project_type?: string;
-  global_config?: ProjectGlobalConfig;
-  status?: ProjectStatus;
+  form_type?: string;
+  global_config?: FormGlobalConfig;
+  status?: FormStatus;
 }

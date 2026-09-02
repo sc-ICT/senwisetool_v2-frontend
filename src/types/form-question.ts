@@ -1,8 +1,8 @@
 import type { QuestionType } from "@/types/question-bank";
 
-export interface ProjectQuestion {
+export interface FormQuestion {
   id: number;
-  project_id: number;
+  form_id: number;
   section_id: number;
 
   question_definition_id: number;
@@ -10,7 +10,7 @@ export interface ProjectQuestion {
 
   position: number;
 
-  config: ProjectQuestionConfig;
+  config: FormQuestionConfig;
 
   question_code: string;
   question_name: string;
@@ -20,25 +20,25 @@ export interface ProjectQuestion {
 
   question_type: QuestionType;
 
-  options: ProjectQuestionOption[];
+  options: FormQuestionOption[];
 }
 
-export interface ProjectQuestionListResponse {
-  items: ProjectQuestion[];
+export interface FormQuestionListResponse {
+  items: FormQuestion[];
   count: number;
 }
 
-export interface ProjectQuestionCreate {
+export interface FormQuestionCreate {
   question_definition_id: number;
   question_version_id: number;
-  config: ProjectQuestionConfig;
+  config: FormQuestionConfig;
 }
 
-export interface ProjectQuestionUpdate {
-  config?: ProjectQuestionConfig;
+export interface FormQuestionUpdate {
+  config?: FormQuestionConfig;
 }
 
-export interface ProjectQuestionValidationConfig {
+export interface FormQuestionValidationConfig {
   required: boolean;
 
   min_value: number | null;
@@ -50,7 +50,7 @@ export interface ProjectQuestionValidationConfig {
   default_value: string | string[] | null;
 }
 
-export interface ProjectQuestionDisplayConfig {
+export interface FormQuestionDisplayConfig {
   visible: boolean;
   readonly: boolean;
 
@@ -58,12 +58,12 @@ export interface ProjectQuestionDisplayConfig {
   help_text: string | null;
 }
 
-export interface ProjectQuestionConfig {
-  validation: ProjectQuestionValidationConfig;
-  display: ProjectQuestionDisplayConfig;
+export interface FormQuestionConfig {
+  validation: FormQuestionValidationConfig;
+  display: FormQuestionDisplayConfig;
 }
 
-export interface ProjectQuestionOption {
+export interface FormQuestionOption {
   id: number;
   value: string;
   label: string;

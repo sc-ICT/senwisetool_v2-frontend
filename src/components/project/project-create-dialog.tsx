@@ -15,23 +15,19 @@ interface ProjectCreateDialogProps {
 
 const projectTypes = [
   {
-    value: "INSPECTION_INITIALE",
-    label: "Inspection initiale",
-  },
-  {
-    value: "INSPECTION_INTERNE",
-    label: "Inspection interne",
-  },
-  {
-    value: "ENQUETE",
+    value: "SURVEY",
     label: "Enquête",
+  },
+  {
+    value: "INSPECTION",
+    label: "Inspection",
   },
   {
     value: "AUDIT",
     label: "Audit",
   },
   {
-    value: "SUIVI",
+    value: "MONITORING",
     label: "Suivi",
   },
 ];
@@ -43,7 +39,7 @@ export function ProjectCreateDialog({
 }: ProjectCreateDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [projectType, setProjectType] = useState("INSPECTION_INITIALE");
+  const [projectType, setProjectType] = useState("SURVEY");
 
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +47,6 @@ export function ProjectCreateDialog({
     setError(null);
 
     const normalizedName = name.trim();
-
     const normalizedDescription = description.trim();
 
     if (!normalizedName) {
@@ -102,7 +97,6 @@ export function ProjectCreateDialog({
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -135,7 +129,7 @@ export function ProjectCreateDialog({
                 color: "var(--color-foreground-muted)",
               }}
             >
-              Préparez le cadre général de votre projet.
+              Créez le cadre général de votre projet de collecte.
             </div>
           </div>
 
@@ -150,7 +144,6 @@ export function ProjectCreateDialog({
           </button>
         </div>
 
-        {/* Corps */}
         <div
           style={{
             flex: 1,
@@ -176,7 +169,16 @@ export function ProjectCreateDialog({
           )}
 
           <section>
-            <SectionTitle>Informations générales</SectionTitle>
+            <div
+              style={{
+                marginBottom: "0.75rem",
+                fontSize: "0.8125rem",
+                fontWeight: 700,
+                color: "var(--color-foreground)",
+              }}
+            >
+              Informations générales
+            </div>
 
             <div
               style={{
@@ -185,7 +187,19 @@ export function ProjectCreateDialog({
                 gap: "1rem",
               }}
             >
-              <Field label="Nom" required>
+              <div>
+                <label style={labelStyle}>
+                  Nom
+                  <span
+                    style={{
+                      color: "#DC2626",
+                    }}
+                  >
+                    {" "}
+                    *
+                  </span>
+                </label>
+
                 <input
                   value={name}
                   onChange={(event) => {
@@ -193,12 +207,14 @@ export function ProjectCreateDialog({
                   }}
                   maxLength={255}
                   disabled={isPending}
-                  placeholder="Ex. Inspection initiale cacao"
+                  placeholder="Ex. Suivi des plantations cacao"
                   style={inputStyle}
                 />
-              </Field>
+              </div>
 
-              <Field label="Type de projet">
+              <div>
+                <label style={labelStyle}>Type de projet</label>
+
                 <select
                   value={projectType}
                   onChange={(event) => {
@@ -213,37 +229,36 @@ export function ProjectCreateDialog({
                     </option>
                   ))}
                 </select>
-              </Field>
+              </div>
 
               <div
                 style={{
                   gridColumn: "1 / -1",
                 }}
               >
-                <Field label="Description">
-                  <textarea
-                    value={description}
-                    onChange={(event) => {
-                      setDescription(event.target.value);
-                    }}
-                    rows={3}
-                    disabled={isPending}
-                    placeholder="Décrivez l'objectif de ce projet..."
-                    style={{
-                      ...inputStyle,
-                      height: "auto",
-                      minHeight: "84px",
-                      padding: "0.75rem 0.875rem",
-                      resize: "vertical",
-                    }}
-                  />
-                </Field>
+                <label style={labelStyle}>Description</label>
+
+                <textarea
+                  value={description}
+                  onChange={(event) => {
+                    setDescription(event.target.value);
+                  }}
+                  rows={4}
+                  disabled={isPending}
+                  placeholder="Décrivez l'objectif général du projet..."
+                  style={{
+                    ...inputStyle,
+                    height: "auto",
+                    minHeight: "100px",
+                    padding: "0.75rem 0.875rem",
+                    resize: "vertical",
+                  }}
+                />
               </div>
             </div>
           </section>
         </div>
 
-        {/* Footer */}
         <div
           style={{
             display: "flex",
@@ -290,20 +305,13 @@ export function ProjectCreateDialog({
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        marginBottom: "0.75rem",
-        fontSize: "0.8125rem",
-        fontWeight: 700,
-        color: "var(--color-foreground)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
+const labelStyle = {
+  display: "block",
+  marginBottom: "0.375rem",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  color: "var(--color-foreground)",
+};
 
 const inputStyle = {
   width: "100%",
@@ -321,95 +329,40 @@ const inputStyle = {
 const closeButtonStyle = {
   width: "32px",
   height: "32px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   borderRadius: "0.5rem",
   border: "1px solid var(--color-border)",
   background: "var(--color-surface-raised)",
   color: "var(--color-foreground-muted)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
   cursor: "pointer",
 };
 
 const secondaryButtonStyle = {
-  height: "38px",
+  height: "36px",
   padding: "0 0.875rem",
   borderRadius: "0.625rem",
   border: "1px solid var(--color-border)",
   background: "var(--color-surface-raised)",
   color: "var(--color-foreground)",
-  display: "flex",
-  alignItems: "center",
-  gap: "0.375rem",
   fontSize: "0.8125rem",
   fontWeight: 600,
   cursor: "pointer",
 };
 
 const primaryButtonStyle = {
-  height: "38px",
+  height: "36px",
   padding: "0 0.875rem",
   borderRadius: "0.625rem",
-  border: "1px solid rgba(93, 184, 58, 0.3)",
-  background: "rgba(93, 184, 58, 0.12)",
+  border: "1px solid rgba(93, 184, 58, 0.25)",
+  background: "rgba(93, 184, 58, 0.1)",
   color: "#5DB83A",
   display: "flex",
   alignItems: "center",
-  gap: "0.375rem",
+  justifyContent: "center",
+  gap: "0.5rem",
   fontSize: "0.8125rem",
   fontWeight: 600,
   cursor: "pointer",
 };
-
-function Field({
-  label,
-  required = false,
-  hint,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label
-        style={{
-          display: "block",
-          marginBottom: "0.425rem",
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          color: "var(--color-foreground)",
-        }}
-      >
-        {label}
-
-        {required && (
-          <span
-            style={{
-              marginLeft: "0.2rem",
-              color: "#EF4444",
-            }}
-          >
-            *
-          </span>
-        )}
-      </label>
-
-      {children}
-
-      {hint && (
-        <div
-          style={{
-            marginTop: "0.3rem",
-            fontSize: "0.6875rem",
-            color: "var(--color-foreground-muted)",
-          }}
-        >
-          {hint}
-        </div>
-      )}
-    </div>
-  );
-}

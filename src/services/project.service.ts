@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/common";
-import type { FileNode, ProjectFilesResponse } from "@/types/file-system";
+import type { FormListResponse } from "@/types/form";
 import type {
   Project,
   ProjectCreate,
@@ -32,32 +32,24 @@ export const projectService = {
     return api.patch<Project>(`/projects/${projectId}`, payload);
   },
 
+  async publish(projectId: number): Promise<ApiResponse<Project>> {
+    return api.patch<Project>(`/projects/${projectId}/publish`);
+  },
+
   async archive(projectId: number): Promise<ApiResponse<Project>> {
     return api.patch<Project>(`/projects/${projectId}/archive`);
   },
 
-  async delete(projectId: number): Promise<void> {
-    await api.delete(`/projects/${projectId}`);
+  async restoreToDraft(projectId: number): Promise<ApiResponse<Project>> {
+    return api.patch<Project>(`/projects/${projectId}/draft`);
   },
 
-  async listFiles(
+  async listForms(
     projectId: number,
-  ): Promise<ApiResponse<ProjectFilesResponse>> {
-    return api.get<ProjectFilesResponse>(`/projects/${projectId}/files`);
-  },
+    includeArchived = false,
+  ): Promise<ApiResponse<FormListResponse>> {
+    const query = includeArchived ? "?include_archived=true" : "";
 
-  async uploadFile(
-    projectId: number,
-    file: File,
-  ): Promise<ApiResponse<FileNode>> {
-    const formData = new FormData();
-
-    formData.append("file", file);
-
-    return api.upload<FileNode>(`/projects/${projectId}/files`, formData);
-  },
-
-  async deleteFile(projectId: number, fileId: number): Promise<void> {
-    await api.delete(`/projects/${projectId}/files/${fileId}`);
+    return api.get<FormListResponse>(`/projects/${projectId}/forms${query}`);
   },
 };

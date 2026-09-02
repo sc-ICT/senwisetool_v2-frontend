@@ -3,7 +3,7 @@
 import { FolderPlus, Loader2, X } from "lucide-react";
 import { useState } from "react";
 
-interface ProjectSectionCreateDialogProps {
+interface FormSectionCreateDialogProps {
   isPending: boolean;
   onClose: () => void;
   onSubmit: (data: {
@@ -13,11 +13,11 @@ interface ProjectSectionCreateDialogProps {
   }) => void;
 }
 
-export function ProjectSectionCreateDialog({
+export function FormSectionCreateDialog({
   isPending,
   onClose,
   onSubmit,
-}: ProjectSectionCreateDialogProps) {
+}: FormSectionCreateDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
@@ -57,7 +57,7 @@ export function ProjectSectionCreateDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="project-section-create-title"
+        aria-labelledby="form-section-create-title"
         style={{
           width: "100%",
           maxWidth: "460px",
@@ -79,7 +79,7 @@ export function ProjectSectionCreateDialog({
         >
           <div>
             <div
-              id="project-section-create-title"
+              id="form-section-create-title"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -100,7 +100,7 @@ export function ProjectSectionCreateDialog({
                 color: "var(--color-foreground-muted)",
               }}
             >
-              Structurez votre projet par étapes ou thèmes.
+              Structurez votre formulaire par étapes ou thèmes.
             </div>
           </div>
 

@@ -2,23 +2,23 @@
 
 import { GitBranch, Loader2, Plus, Settings, Trash2 } from "lucide-react";
 
-import type { ProjectQuestion } from "@/types/project-question";
+import type { FormQuestion } from "@/types/form-question";
 import { useState } from "react";
 
-interface ProjectSectionQuestionsProps {
-  questions: ProjectQuestion[];
+interface FormSectionQuestionsProps {
+  questions: FormQuestion[];
   isLoading: boolean;
   deletingQuestionId: number | null;
   reordering: boolean;
   availableQuestionCount: number;
   onAdd: () => void;
-  onDelete: (question: ProjectQuestion) => void;
+  onDelete: (question: FormQuestion) => void;
   onReorder: (draggedId: number, targetId: number) => void;
-  onConfigure: (question: ProjectQuestion) => void;
-  onDependencies: (question: ProjectQuestion) => void;
+  onConfigure: (question: FormQuestion) => void;
+  onDependencies: (question: FormQuestion) => void;
 }
 
-export function ProjectSectionQuestions({
+export function FormSectionQuestions({
   questions,
   isLoading,
   deletingQuestionId,
@@ -29,7 +29,7 @@ export function ProjectSectionQuestions({
   onReorder,
   onConfigure,
   onDependencies,
-}: ProjectSectionQuestionsProps) {
+}: FormSectionQuestionsProps) {
   const [draggedQuestionId, setDraggedQuestionId] = useState<number | null>(
     null,
   );
@@ -177,7 +177,7 @@ export function ProjectSectionQuestions({
           }}
         >
           {questions.map((question) => (
-            <ProjectQuestionRow
+            <FormQuestionRow
               key={question.id}
               question={question}
               isDeleting={deletingQuestionId === question.id}
@@ -221,7 +221,7 @@ export function ProjectSectionQuestions({
   );
 }
 
-function ProjectQuestionRow({
+function FormQuestionRow({
   question,
   dragged,
   dragOver,
@@ -235,7 +235,7 @@ function ProjectQuestionRow({
   onConfigure,
   onDependencies,
 }: {
-  question: ProjectQuestion;
+  question: FormQuestion;
 
   dragged: boolean;
   dragOver: boolean;

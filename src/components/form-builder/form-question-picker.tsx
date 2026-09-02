@@ -9,7 +9,7 @@ import type { QuestionDefinition } from "@/types/question-bank";
 import { questionGroupService } from "@/services/question-group.service";
 import { useQuery } from "@tanstack/react-query";
 
-interface ProjectQuestionPickerProps {
+interface FormQuestionPickerProps {
   isPending: boolean;
 
   existingQuestionIds: number[];
@@ -24,12 +24,12 @@ interface ProjectQuestionPickerProps {
   ) => void;
 }
 
-export function ProjectQuestionPicker({
+export function FormQuestionPicker({
   isPending,
   existingQuestionIds,
   onClose,
   onSubmit,
-}: ProjectQuestionPickerProps) {
+}: FormQuestionPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);

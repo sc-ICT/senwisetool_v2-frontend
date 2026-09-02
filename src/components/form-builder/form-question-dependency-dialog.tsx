@@ -6,11 +6,11 @@ import { useMemo, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 
-import type { ProjectQuestion } from "@/types/project-question";
+import type { FormQuestion } from "@/types/form-question";
 
 import {
-  ProjectQuestionDependencyCreate,
-  projectQuestionDependencyService,
+  FormQuestionDependencyCreate,
+  formQuestionDependencyService,
   type DependencyAction,
   type DependencyComparisonSourceType,
   type DependencyComparisonValue,
@@ -18,16 +18,16 @@ import {
   type DependencyConditionGroup,
   type DependencyConditionOperator,
   type DependencyLogicalOperator,
-  type ProjectQuestionDependency,
-} from "@/services/project-question-dependency.service";
+  type FormQuestionDependency,
+} from "@/services/form-question-dependency.service";
 import { toast } from "sonner";
 import { DependencyActionEditor } from "./dependency-action-editor";
 
-interface ProjectQuestionDependencyDialogProps {
-  projectId: number;
+interface FormQuestionDependencyDialogProps {
+  formId: number;
   sectionId: number;
-  targetQuestion: ProjectQuestion;
-  allQuestions: ProjectQuestion[];
+  targetQuestion: FormQuestion;
+  allQuestions: FormQuestion[];
   sections: Array<{
     id: number;
     name: string;
@@ -156,8 +156,8 @@ const getAvailableConditionOperators = (
   );
 };
 
-export function ProjectQuestionDependencyDialog({
-  projectId,
+export function FormQuestionDependencyDialog({
+  formId,
   sectionId,
   targetQuestion,
   allQuestions,
@@ -165,7 +165,7 @@ export function ProjectQuestionDependencyDialog({
   isPending,
   onClose,
   onChanged,
-}: ProjectQuestionDependencyDialogProps) {
+}: FormQuestionDependencyDialogProps) {
   const queryClient = useQueryClient();
 
   const [logicalOperator, setLogicalOperator] =
@@ -197,15 +197,15 @@ export function ProjectQuestionDependencyDialog({
 
   const dependenciesQuery = useQuery({
     queryKey: [
-      "project-question-dependencies",
-      projectId,
+      "form-question-dependencies",
+      formId,
       sectionId,
       targetQuestion.id,
     ],
 
     queryFn: async () => {
-      const response = await projectQuestionDependencyService.list(
-        projectId,
+      const response = await formQuestionDependencyService.list(
+        formId,
         sectionId,
         targetQuestion.id,
       );
@@ -213,7 +213,7 @@ export function ProjectQuestionDependencyDialog({
       return response.data ?? [];
     },
 
-    enabled: projectId > 0 && sectionId > 0 && targetQuestion.id > 0,
+    enabled: formId > 0 && sectionId > 0 && targetQuestion.id > 0,
   });
 
   const dependencies = dependenciesQuery.data ?? [];
@@ -406,7 +406,7 @@ export function ProjectQuestionDependencyDialog({
         return;
       }
 
-      const payload: ProjectQuestionDependencyCreate = {
+      const payload: FormQuestionDependencyCreate = {
         condition,
         actions_if_true: actionsIfTrue,
         actions_if_false: actionsIfFalse,
@@ -433,8 +433,8 @@ export function ProjectQuestionDependencyDialog({
       }
 
       if (editingDependencyId !== null) {
-        return projectQuestionDependencyService.update(
-          projectId,
+        return formQuestionDependencyService.update(
+          formId,
           sectionId,
           targetQuestion.id,
           editingDependencyId,
@@ -442,8 +442,8 @@ export function ProjectQuestionDependencyDialog({
         );
       }
 
-      return projectQuestionDependencyService.create(
-        projectId,
+      return formQuestionDependencyService.create(
+        formId,
         sectionId,
         targetQuestion.id,
         payload,
@@ -463,8 +463,8 @@ export function ProjectQuestionDependencyDialog({
 
       await queryClient.invalidateQueries({
         queryKey: [
-          "project-question-dependencies",
-          projectId,
+          "form-question-dependencies",
+          formId,
           sectionId,
           targetQuestion.id,
         ],
@@ -491,8 +491,8 @@ export function ProjectQuestionDependencyDialog({
 
   const deleteMutation = useMutation({
     mutationFn: async (dependencyId: number) => {
-      return projectQuestionDependencyService.delete(
-        projectId,
+      return formQuestionDependencyService.delete(
+        formId,
         sectionId,
         targetQuestion.id,
         dependencyId,
@@ -502,8 +502,8 @@ export function ProjectQuestionDependencyDialog({
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: [
-          "project-question-dependencies",
-          projectId,
+          "form-question-dependencies",
+          formId,
           sectionId,
           targetQuestion.id,
         ],
@@ -553,7 +553,7 @@ export function ProjectQuestionDependencyDialog({
     );
   };
 
-  const loadDependencyIntoForm = (dependency: ProjectQuestionDependency) => {
+  const loadDependencyIntoForm = (dependency: FormQuestionDependency) => {
     const condition = dependency.condition?.conditions?.[0];
 
     if (!condition) {
@@ -1324,7 +1324,7 @@ export function ProjectQuestionDependencyDialog({
                   gap: "0.375rem",
                 }}
               >
-                {dependencies.map((dependency: ProjectQuestionDependency) => {
+                {dependencies.map((dependency: FormQuestionDependency) => {
                   const conditions = dependency.condition?.conditions ?? [];
 
                   const nestedGroups = dependency.condition?.groups ?? [];

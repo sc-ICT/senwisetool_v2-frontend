@@ -1,21 +1,13 @@
 "use client";
 
-import { ProjectCreateDialog } from "@/components/form-builder/project-create-dialog";
 import { Header } from "@/components/layout/header";
+import { ProjectCreateDialog } from "@/components/project/project-create-dialog";
 import { ApiError } from "@/lib/api";
 import { projectService } from "@/services/project.service";
 import type { Project } from "@/types/project";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Archive,
-  FolderKanban,
-  Loader2,
-  MoreVertical,
-  Plus,
-  RefreshCw,
-  Search,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { FolderKanban, Loader2, Plus, RefreshCw, Search } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -26,11 +18,7 @@ export default function ProjectsPage() {
 
   const [includeArchived, setIncludeArchived] = useState(false);
 
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-  const router = useRouter();
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["projects", includeArchived],
@@ -104,8 +92,6 @@ export default function ProjectsPage() {
         queryKey: ["projects"],
       });
 
-      setOpenMenuId(null);
-
       toast.success("Projet archivé avec succès.");
     },
 
@@ -122,8 +108,6 @@ export default function ProjectsPage() {
   });
 
   const handleArchive = (project: Project) => {
-    setOpenMenuId(null);
-
     const confirmed = window.confirm(
       `Voulez-vous vraiment archiver « ${project.name} » ?`,
     );
@@ -139,7 +123,7 @@ export default function ProjectsPage() {
     <>
       <Header
         title="Projets"
-        description="Préparez et gérez vos projets de collecte."
+        description="Organisez vos formulaires et vos ressources par projet."
         actions={
           <>
             <button
@@ -285,28 +269,131 @@ export default function ProjectsPage() {
           </div>
 
           {isLoading ? (
-            <LoadingState />
+            <div
+              style={{
+                minHeight: "280px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Loader2 size={22} className="animate-spin" />
+            </div>
           ) : error ? (
-            <ErrorState
-              error={error}
-              onRetry={() => {
-                void refetch();
+            <div
+              style={{
+                minHeight: "280px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.75rem",
+                padding: "2rem",
+                textAlign: "center",
               }}
-            />
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.875rem",
+                  color: "var(--color-foreground-muted)",
+                }}
+              >
+                Impossible de récupérer les projets.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  void refetch();
+                }}
+                style={{
+                  height: "34px",
+                  padding: "0 0.75rem",
+                  borderRadius: "0.625rem",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-surface-raised)",
+                  cursor: "pointer",
+                }}
+              >
+                Réessayer
+              </button>
+            </div>
           ) : filteredProjects.length === 0 ? (
-            <EmptyState
-              hasSearch={Boolean(searchQuery.trim())}
-              onCreate={() => {
-                setIsCreateOpen(true);
+            <div
+              style={{
+                minHeight: "280px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.75rem",
+                padding: "2rem",
+                textAlign: "center",
               }}
-            />
+            >
+              <FolderKanban
+                size={30}
+                style={{
+                  color: "var(--color-foreground-muted)",
+                }}
+              />
+
+              <div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {searchQuery.trim() ? "Aucun projet trouvé" : "Aucun projet"}
+                </p>
+
+                <p
+                  style={{
+                    margin: "0.375rem 0 0",
+                    fontSize: "0.75rem",
+                    color: "var(--color-foreground-muted)",
+                  }}
+                >
+                  {searchQuery.trim()
+                    ? "Essayez une autre recherche."
+                    : "Créez votre premier projet pour commencer."}
+                </p>
+              </div>
+
+              {!searchQuery.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateOpen(true);
+                  }}
+                  style={{
+                    marginTop: "0.25rem",
+                    height: "34px",
+                    padding: "0 0.75rem",
+                    borderRadius: "0.625rem",
+                    border: "1px solid rgba(93, 184, 58, 0.25)",
+                    background: "rgba(93, 184, 58, 0.1)",
+                    color: "#5DB83A",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Plus size={14} />
+                  Créer un projet
+                </button>
+              )}
+            </div>
           ) : (
             <div>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "minmax(280px, 1fr) 200px 130px 110px 48px",
+                    "minmax(280px, 1fr) 180px 130px 110px 48px",
                   gap: "1rem",
                   alignItems: "center",
                   padding: "0.75rem 1.25rem",
@@ -318,30 +405,108 @@ export default function ProjectsPage() {
                   color: "var(--color-foreground-muted)",
                 }}
               >
-                <div>Projet</div>
-                <div>Type</div>
-                <div>Statut</div>
-                <div>Créateur</div>
-                <div />
+                <span>Projet</span>
+                <span>Type</span>
+                <span>Statut</span>
+                <span>Code</span>
+                <span />
               </div>
 
               {filteredProjects.map((project) => (
-                <ProjectRow
+                <div
                   key={project.id}
-                  project={project}
-                  menuOpen={openMenuId === project.id}
-                  onOpen={() => {
-                    router.push(`/dashboard/projects/${project.id}`);
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "minmax(280px, 1fr) 180px 130px 110px 48px",
+                    gap: "1rem",
+                    alignItems: "center",
+                    padding: "1rem 1.25rem",
+                    borderBottom: "1px solid var(--color-border)",
                   }}
-                  onToggleMenu={() => {
-                    setOpenMenuId((current) =>
-                      current === project.id ? null : project.id,
-                    );
-                  }}
-                  onArchive={() => {
-                    handleArchive(project);
-                  }}
-                />
+                >
+                  <Link
+                    href={`/dashboard/projects/${project.id}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      minWidth: 0,
+                      textDecoration: "none",
+                      color: "var(--color-foreground)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "38px",
+                        height: "38px",
+                        flexShrink: 0,
+                        borderRadius: "0.625rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(93, 184, 58, 0.1)",
+                        color: "#5DB83A",
+                      }}
+                    >
+                      <FolderKanban size={18} />
+                    </div>
+
+                    <div
+                      style={{
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.8125rem",
+                          fontWeight: 600,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {project.name}
+                      </div>
+
+                      {project.description && (
+                        <div
+                          style={{
+                            marginTop: "0.2rem",
+                            fontSize: "0.7rem",
+                            color: "var(--color-foreground-muted)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {project.description}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--color-foreground-muted)",
+                    }}
+                  >
+                    {project.project_type}
+                  </span>
+
+                  <StatusBadge status={project.status} />
+
+                  <span
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "0.7rem",
+                      color: "var(--color-foreground-muted)",
+                    }}
+                  >
+                    {project.code}
+                  </span>
+                </div>
               ))}
             </div>
           )}
@@ -365,405 +530,49 @@ export default function ProjectsPage() {
   );
 }
 
-function ProjectRow({
-  project,
-  menuOpen,
-  onToggleMenu,
-  onArchive,
-  onOpen,
+function StatusBadge({
+  status,
 }: {
-  project: Project;
-  menuOpen: boolean;
-  onToggleMenu: () => void;
-  onArchive: () => void;
-  onOpen: () => void;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }) {
-  return (
-    <div
-      style={{
-        position: "relative",
-        display: "grid",
-        gridTemplateColumns: "minmax(280px, 1fr) 200px 130px 110px 48px",
-        gap: "1rem",
-        alignItems: "center",
-        padding: "0.875rem 1.25rem",
-        borderBottom: "1px solid var(--color-border)",
-        transition: "background 0.15s ease",
-        cursor: "pointer",
-      }}
-      onClick={onOpen}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = "var(--color-surface-raised)";
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = "transparent";
-      }}
-    >
-      <div
-        style={{
-          minWidth: 0,
-          display: "flex",
-          alignItems: "center",
-          gap: "0.75rem",
-        }}
-      >
-        <div
-          style={{
-            width: "38px",
-            height: "38px",
-            flexShrink: 0,
-            borderRadius: "0.625rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(93, 184, 58, 0.08)",
-            border: "1px solid rgba(93, 184, 58, 0.16)",
-          }}
-        >
-          <FolderKanban size={17} color="#5DB83A" />
-        </div>
+  const config = {
+    DRAFT: {
+      label: "Brouillon",
+      color: "var(--color-foreground-muted)",
+      background: "var(--color-surface-raised)",
+    },
 
-        <div
-          style={{
-            minWidth: 0,
-          }}
-        >
-          <div
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              color: "var(--color-foreground)",
-            }}
-          >
-            {project.name}
-          </div>
+    PUBLISHED: {
+      label: "Publié",
+      color: "#5DB83A",
+      background: "rgb(93 184 58 / 0.12)",
+    },
 
-          <div
-            style={{
-              marginTop: "0.125rem",
-              fontSize: "0.6875rem",
-              color: "var(--color-foreground-muted)",
-            }}
-          >
-            {project.code}
-          </div>
-        </div>
-      </div>
+    ARCHIVED: {
+      label: "Archivé",
+      color: "#F59E0B",
+      background: "rgb(245 158 11 / 0.12)",
+    },
+  } as const;
 
-      <div
-        style={{
-          fontSize: "0.75rem",
-          color: "var(--color-foreground-muted)",
-        }}
-      >
-        {project.project_type}
-      </div>
-
-      <div>
-        <StatusBadge status={project.status} />
-      </div>
-
-      <div
-        style={{
-          fontSize: "0.75rem",
-          color: "var(--color-foreground-muted)",
-        }}
-      >
-        {project.created_by}
-      </div>
-
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleMenu();
-          }}
-          style={{
-            width: "34px",
-            height: "34px",
-            borderRadius: "0.5rem",
-            border: "1px solid transparent",
-            background: menuOpen
-              ? "var(--color-surface-raised)"
-              : "transparent",
-            color: "var(--color-foreground-muted)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-          aria-label={`Actions pour ${project.name}`}
-        >
-          <MoreVertical size={17} />
-        </button>
-
-        {menuOpen && <ProjectContextMenu onArchive={onArchive} />}
-      </div>
-    </div>
-  );
-}
-
-function ProjectContextMenu({ onArchive }: { onArchive: () => void }) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        top: "calc(100% + 0.375rem)",
-        right: 0,
-        zIndex: 100,
-        minWidth: "190px",
-        padding: "0.375rem",
-        border: "1px solid var(--color-border)",
-        borderRadius: "0.75rem",
-        background: "var(--color-surface)",
-        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.14)",
-      }}
-    >
-      <MenuButton icon={Archive} label="Archiver" onClick={onArchive} />
-    </div>
-  );
-}
-
-function MenuButton({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: typeof Archive;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        width: "100%",
-        height: "36px",
-        border: "0",
-        borderRadius: "0.5rem",
-        background: "transparent",
-        color: "var(--color-foreground)",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.625rem",
-        padding: "0 0.625rem",
-        fontSize: "0.8125rem",
-        fontWeight: 500,
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = "var(--color-surface-raised)";
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = "transparent";
-      }}
-    >
-      <Icon size={15} />
-      {label}
-    </button>
-  );
-}
-
-function StatusBadge({ status }: { status: Project["status"] }) {
-  const label =
-    status === "DRAFT"
-      ? "Brouillon"
-      : status === "PUBLISHED"
-        ? "Publié"
-        : "Archivé";
+  const current = config[status];
 
   return (
     <span
       style={{
         display: "inline-flex",
-        alignItems: "center",
-        height: "24px",
-        padding: "0 0.5rem",
+        width: "fit-content",
+        padding: "0.2rem 0.625rem",
         borderRadius: "999px",
-        background:
-          status === "DRAFT"
-            ? "rgba(148, 163, 184, 0.1)"
-            : status === "PUBLISHED"
-              ? "rgba(93, 184, 58, 0.1)"
-              : "rgba(148, 163, 184, 0.1)",
-        color:
-          status === "PUBLISHED" ? "#5DB83A" : "var(--color-foreground-muted)",
+        background: current.background,
+        color: current.color,
         fontSize: "0.6875rem",
         fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
       }}
     >
-      {label}
+      {current.label}
     </span>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div
-      style={{
-        minHeight: "320px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "var(--color-foreground-muted)",
-      }}
-    >
-      <Loader2 size={22} className="animate-spin" />
-    </div>
-  );
-}
-
-function ErrorState({
-  error,
-  onRetry,
-}: {
-  error: unknown;
-  onRetry: () => void;
-}) {
-  return (
-    <div
-      style={{
-        minHeight: "320px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.75rem",
-        padding: "2rem",
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "0.9375rem",
-          fontWeight: 600,
-        }}
-      >
-        Impossible de charger les projets
-      </div>
-
-      <div
-        style={{
-          fontSize: "0.8125rem",
-          color: "var(--color-foreground-muted)",
-        }}
-      >
-        {error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Une erreur est survenue."}
-      </div>
-
-      <button
-        type="button"
-        onClick={onRetry}
-        style={{
-          height: "36px",
-          padding: "0 0.875rem",
-          borderRadius: "0.625rem",
-          border: "1px solid var(--color-border)",
-          background: "var(--color-surface-raised)",
-          color: "var(--color-foreground)",
-          fontSize: "0.8125rem",
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        Réessayer
-      </button>
-    </div>
-  );
-}
-
-function EmptyState({
-  hasSearch,
-  onCreate,
-}: {
-  hasSearch: boolean;
-  onCreate: () => void;
-}) {
-  return (
-    <div
-      style={{
-        minHeight: "320px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.625rem",
-        padding: "2rem",
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          width: "52px",
-          height: "52px",
-          borderRadius: "0.875rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "var(--color-surface-raised)",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        <FolderKanban size={22} color="#5DB83A" />
-      </div>
-
-      <div
-        style={{
-          fontSize: "0.9375rem",
-          fontWeight: 600,
-        }}
-      >
-        {hasSearch ? "Aucun résultat" : "Aucun projet"}
-      </div>
-
-      <div
-        style={{
-          fontSize: "0.8125rem",
-          color: "var(--color-foreground-muted)",
-          maxWidth: "460px",
-        }}
-      >
-        {hasSearch
-          ? "Aucun projet ne correspond à votre recherche."
-          : "Créez votre premier projet pour commencer à construire votre collecte."}
-      </div>
-
-      {!hasSearch && (
-        <button
-          type="button"
-          onClick={onCreate}
-          style={{
-            marginTop: "0.25rem",
-            height: "36px",
-            padding: "0 0.875rem",
-            borderRadius: "0.625rem",
-            border: "1px solid rgba(93, 184, 58, 0.25)",
-            background: "rgba(93, 184, 58, 0.1)",
-            color: "#5DB83A",
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Créer un projet
-        </button>
-      )}
-    </div>
   );
 }

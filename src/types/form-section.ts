@@ -1,34 +1,34 @@
-import { ProjectQuestion } from "./project-question";
+import { FormQuestion } from "./form-question";
 
-export interface ProjectSection {
+export interface FormSection {
   id: number;
-  project_id: number;
+  form_id: number;
   name: string;
   description: string | null;
   position: number;
   config: Record<string, unknown>;
 }
 
-export interface ProjectSectionListResponse {
-  items: ProjectSection[];
+export interface FormSectionListResponse {
+  items: FormSection[];
   count: number;
 }
 
-export interface ProjectSectionCreate {
+export interface FormSectionCreate {
   name: string;
   description: string | null;
   config: Record<string, unknown>;
 }
 
-export interface ProjectSectionUpdate {
+export interface FormSectionUpdate {
   name?: string;
   description?: string | null;
   config?: Record<string, unknown>;
 }
 
-// export interface ProjectQuestion {
+// export interface FormQuestion {
 //   id: number;
-//   project_id: number;
+//   form_id: number;
 //   section_id: number;
 //   question_definition_id: number;
 //   question_version_id: number;
@@ -36,17 +36,17 @@ export interface ProjectSectionUpdate {
 //   config: Record<string, unknown>;
 // }
 
-export interface ProjectQuestionListResponse {
-  items: ProjectQuestion[];
+export interface FormQuestionListResponse {
+  items: FormQuestion[];
   count: number;
 }
 
-export interface ProjectQuestionCreate {
+export interface FormQuestionCreate {
   question_definition_id: number;
   question_version_id: number;
   config: Record<string, unknown>;
 }
 
-export interface ProjectQuestionUpdate {
+export interface FormQuestionUpdate {
   config?: Record<string, unknown>;
 }

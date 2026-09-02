@@ -1,14 +1,17 @@
 "use client";
+
 /* eslint-disable @next/next/no-img-element */
+
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { AnimatePresence, motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FileText,
   Folder,
+  FolderKanban,
   LayoutDashboard,
   LogOut,
 } from "lucide-react";
@@ -17,42 +20,91 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const NAV = [
+/* -------------------------------------------------------------------------- */
+/* Navigation types                                                           */
+/* -------------------------------------------------------------------------- */
+
+type NavChild = {
+  href: string;
+  label: string;
+};
+
+type NavLink = {
+  type: "link";
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  exact?: boolean;
+};
+
+type NavGroup = {
+  type: "group";
+  label: string;
+  icon: LucideIcon;
+  children: NavChild[];
+};
+
+type NavItem = NavLink | NavGroup;
+
+/* -------------------------------------------------------------------------- */
+/* Navigation                                                                 */
+/* -------------------------------------------------------------------------- */
+
+const NAV: NavItem[] = [
   {
     href: "/dashboard",
     icon: LayoutDashboard,
     label: "Dashboard",
     exact: true,
-    type: "link" as const,
+    type: "link",
   },
   {
     href: "/dashboard/files",
     icon: Folder,
     label: "Fichiers",
     exact: false,
-    type: "link" as const,
+    type: "link",
   },
   {
-    label: "Projets",
-    icon: FileText,
-    type: "group" as const,
-    children: [
-      {
-        href: "/dashboard/projects",
-        label: "Projets",
-      },
-      {
-        href: "/dashboard/question-bank",
-        label: "Banque de questions",
-      },
-    ],
+    href: "/dashboard/question-bank",
+    icon: FolderKanban,
+    label: "Banque de questions",
+    exact: false,
+    type: "link",
   },
+  {
+    href: "/dashboard/projects",
+    icon: FolderKanban,
+    label: "Projets",
+    exact: false,
+    type: "link",
+  },
+  // {
+  //   label: "Formulaires",
+  //   icon: FileText,
+  //   type: "group",
+  //   children: [
+  //     {
+  //       href: "/dashboard/forms",
+  //       label: "Formulaires",
+  //     },
+  //     {
+  //       href: "/dashboard/",
+  //       label: "",
+  //     },
+  //   ],
+  // },
 ];
 
 const ICON_GREEN = "#5DB83A";
 
+/* -------------------------------------------------------------------------- */
+/* Sidebar                                                                    */
+/* -------------------------------------------------------------------------- */
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     Formulaires: true,
   });
@@ -60,6 +112,10 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, clearUser } = useAuthStore();
+
+  /* ------------------------------------------------------------------------ */
+  /* Actions                                                                  */
+  /* ------------------------------------------------------------------------ */
 
   const handleLogout = async () => {
     try {
@@ -81,10 +137,17 @@ export function Sidebar() {
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
 
+  /* ------------------------------------------------------------------------ */
+  /* Render                                                                   */
+  /* ------------------------------------------------------------------------ */
+
   return (
     <motion.aside
       animate={{ width: collapsed ? 68 : 224 }}
-      transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{
+        duration: 0.25,
+        ease: [0.25, 0.46, 0.45, 0.94],
+      }}
       style={{
         position: "relative",
         display: "flex",
@@ -97,7 +160,10 @@ export function Sidebar() {
         zIndex: 10,
       }}
     >
-      {/* Logo */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Logo                                                               */}
+      {/* ------------------------------------------------------------------ */}
+
       <div
         style={{
           height: "60px",
@@ -114,8 +180,13 @@ export function Sidebar() {
           alt="SWT"
           width={28}
           height={28}
-          style={{ borderRadius: "8px", flexShrink: 0, objectFit: "contain" }}
+          style={{
+            borderRadius: "8px",
+            flexShrink: 0,
+            objectFit: "contain",
+          }}
         />
+
         <AnimatePresence>
           {!collapsed && (
             <motion.span
@@ -137,7 +208,10 @@ export function Sidebar() {
         </AnimatePresence>
       </div>
 
-      {/* Navigation */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Navigation                                                         */}
+      {/* ------------------------------------------------------------------ */}
+
       <nav
         style={{
           flex: 1,
@@ -149,6 +223,10 @@ export function Sidebar() {
         }}
       >
         {NAV.map((item) => {
+          /* ================================================================ */
+          /* GROUP                                                            */
+          /* ================================================================ */
+
           if (item.type === "group") {
             const groupOpen = openGroups[item.label] ?? false;
 
@@ -171,10 +249,12 @@ export function Sidebar() {
                   onClick={() => {
                     if (collapsed) {
                       setCollapsed(false);
+
                       setOpenGroups((current) => ({
                         ...current,
                         [item.label]: true,
                       }));
+
                       return;
                     }
 
@@ -351,6 +431,10 @@ export function Sidebar() {
             );
           }
 
+          /* ================================================================ */
+          /* LINK                                                             */
+          /* ================================================================ */
+
           const active = isActive(item.href, item.exact);
 
           return (
@@ -434,7 +518,10 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Footer                                                             */}
+      {/* ------------------------------------------------------------------ */}
+
       <div
         style={{
           padding: "0.75rem 0.625rem",
@@ -465,6 +552,7 @@ export function Sidebar() {
             >
               {user.name}
             </p>
+
             <p
               style={{
                 fontSize: "0.75rem",
@@ -478,6 +566,7 @@ export function Sidebar() {
             </p>
           </div>
         )}
+
         <button
           onClick={handleLogout}
           style={{
@@ -496,17 +585,16 @@ export function Sidebar() {
             transition: "background 0.15s, color 0.15s",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background =
-              "rgb(244 63 94 / 0.1)";
-            (e.currentTarget as HTMLButtonElement).style.color = "#F43F5E";
+            e.currentTarget.style.background = "rgb(244 63 94 / 0.1)";
+            e.currentTarget.style.color = "#F43F5E";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "none";
-            (e.currentTarget as HTMLButtonElement).style.color =
-              "var(--color-foreground-muted)";
+            e.currentTarget.style.background = "none";
+            e.currentTarget.style.color = "var(--color-foreground-muted)";
           }}
         >
           <LogOut size={17} style={{ flexShrink: 0 }} />
+
           <AnimatePresence>
             {!collapsed && (
               <motion.span
@@ -521,7 +609,10 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Bouton collapse */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Bouton collapse                                                    */}
+      {/* ------------------------------------------------------------------ */}
+
       <button
         onClick={() => setCollapsed(!collapsed)}
         style={{

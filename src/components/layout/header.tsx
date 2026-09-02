@@ -1,13 +1,15 @@
 "use client";
 
 import { useAuthStore } from "@/stores/auth.store";
-import { Moon, Sun } from "lucide-react";
+import { Moon, MoveLeft, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
 interface HeaderProps {
   title: React.ReactNode;
   description?: string;
+  backTo?: string;
   actions?: React.ReactNode;
 }
 
@@ -33,7 +35,7 @@ function useHasMounted(): boolean {
   );
 }
 
-export function Header({ title, description, actions }: HeaderProps) {
+export function Header({ title, description, backTo, actions }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const { user } = useAuthStore();
   const mounted = useHasMounted();
@@ -51,28 +53,51 @@ export function Header({ title, description, actions }: HeaderProps) {
         flexShrink: 0,
       }}
     >
-      <div>
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "1.125rem",
-            fontWeight: 600,
-            color: "var(--color-foreground)",
-            lineHeight: 1.2,
-          }}
-        >
-          {title}
-        </h1>
-        {description && (
-          <p
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.625rem",
+          paddingLeft: "0.625rem 0",
+        }}
+      >
+        {backTo && (
+          <Link
+            href={backTo}
             style={{
-              fontSize: "0.75rem",
-              color: "var(--color-foreground-muted)",
+              color: "var(--color-foreground)",
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+              fontWeight: 600,
             }}
           >
-            {description}
-          </p>
+            <MoveLeft size={20} />
+          </Link>
         )}
+        <div>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.125rem",
+              fontWeight: 600,
+              color: "var(--color-foreground)",
+              lineHeight: 1.2,
+            }}
+          >
+            {title}
+          </h1>
+          {description && (
+            <p
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--color-foreground-muted)",
+              }}
+            >
+              {description}
+            </p>
+          )}
+        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>

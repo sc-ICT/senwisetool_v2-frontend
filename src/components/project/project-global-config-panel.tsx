@@ -16,16 +16,18 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { fileSystemService } from "@/services/file-system.service";
+import type { FileNode } from "@/types/file-system";
 import type { ProjectGlobalConfig } from "@/types/project";
-import { ProjectAttachmentsSection } from "./project-attachments-section";
+
+import { AttachmentsSection } from "@/components/form-builder/form-attachments-section";
 
 interface ProjectGlobalConfigPanelProps {
-  projectId: number;
+  projectFolderId: number | null;
   config: ProjectGlobalConfig;
   isPending: boolean;
   onClose: () => void;
   onSubmit: (config: ProjectGlobalConfig) => void;
-  onSaveConfig?: (config: ProjectGlobalConfig) => Promise<boolean>;
 }
 
 type ConfigSection =
@@ -39,12 +41,11 @@ type ConfigSection =
   | "attachments";
 
 export function ProjectGlobalConfigPanel({
-  projectId,
+  projectFolderId,
   config,
   isPending,
   onClose,
   onSubmit,
-  onSaveConfig,
 }: ProjectGlobalConfigPanelProps) {
   const [localConfig, setLocalConfig] = useState<ProjectGlobalConfig>(() =>
     normalizeProjectGlobalConfig(config),
@@ -67,6 +68,18 @@ export function ProjectGlobalConfigPanel({
     setOpenSections((current) => ({
       ...current,
       [section]: !current[section],
+    }));
+  };
+
+  const updateCollection = (
+    patch: Partial<ProjectGlobalConfig["collection"]>,
+  ) => {
+    setLocalConfig((current) => ({
+      ...current,
+      collection: {
+        ...current.collection,
+        ...patch,
+      },
     }));
   };
 
@@ -223,7 +236,7 @@ export function ProjectGlobalConfigPanel({
                     color: "var(--color-foreground)",
                   }}
                 >
-                  Paramètres globaux
+                  Paramètres globaux du projet
                 </div>
 
                 <div
@@ -234,7 +247,7 @@ export function ProjectGlobalConfigPanel({
                     color: "var(--color-foreground-muted)",
                   }}
                 >
-                  Configurez le comportement général du projet.
+                  Configurez les règles générales du projet.
                 </div>
               </div>
             </div>
@@ -263,7 +276,7 @@ export function ProjectGlobalConfigPanel({
           <ConfigSectionHeader
             icon={<ShieldCheck size={16} />}
             title="Collecte"
-            description="Règles générales appliquées aux questions."
+            description="Règles générales appliquées aux formulaires."
             open={openSections.collection}
             onClick={() => toggleSection("collection")}
           />
@@ -272,17 +285,13 @@ export function ProjectGlobalConfigPanel({
             <div style={sectionContentStyle}>
               <ToggleRow
                 label="Toutes les questions obligatoires"
-                description="Chaque question doit recevoir une réponse avant la validation."
+                description="Les formulaires du projet pourront appliquer cette règle par défaut."
                 checked={localConfig.collection.require_all_questions}
                 disabled={isPending}
                 onChange={(value) => {
-                  setLocalConfig((current) => ({
-                    ...current,
-                    collection: {
-                      ...current.collection,
-                      require_all_questions: value,
-                    },
-                  }));
+                  updateCollection({
+                    require_all_questions: value,
+                  });
                 }}
               />
             </div>
@@ -292,7 +301,7 @@ export function ProjectGlobalConfigPanel({
           <ConfigSectionHeader
             icon={<MapPin size={16} />}
             title="Géolocalisation"
-            description="Paramètres GPS appliqués aux collectes."
+            description="Paramètres GPS globaux du projet."
             open={openSections.geolocation}
             onClick={() => toggleSection("geolocation")}
           />
@@ -319,6 +328,7 @@ export function ProjectGlobalConfigPanel({
                     value={localConfig.geolocation.accuracy}
                     disabled={isPending}
                     min={1}
+                    nullable
                     onChange={(value) => {
                       updateGeolocation({
                         accuracy: value,
@@ -382,10 +392,11 @@ export function ProjectGlobalConfigPanel({
             </div>
           )}
 
+          {/* MAPPING */}
           <ConfigSectionHeader
             icon={<MapPin size={16} />}
             title="Fond de carte"
-            description="Configurez le fond cartographique utilisé pour les fonctionnalités de mapping."
+            description="Configuration cartographique globale."
             open={openSections.mapping}
             onClick={() => toggleSection("mapping")}
           />
@@ -394,7 +405,7 @@ export function ProjectGlobalConfigPanel({
             <div style={sectionContentStyle}>
               <ToggleRow
                 label="Activer le fond de carte"
-                description="Permet d'afficher un fond cartographique lors des fonctionnalités de mapping."
+                description="Permet d'utiliser un fond cartographique."
                 checked={localConfig.mapping.enabled}
                 disabled={isPending}
                 onChange={(value) => {
@@ -416,53 +427,27 @@ export function ProjectGlobalConfigPanel({
                       marginTop: "0.625rem",
                     }}
                   >
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        cursor: isPending ? "default" : "pointer",
-                        opacity: isPending ? 0.6 : 1,
+                    <RadioRow
+                      label="Google Maps"
+                      checked={localConfig.mapping.basemap === "standard"}
+                      disabled={isPending}
+                      onChange={() => {
+                        updateMapping({
+                          basemap: "standard",
+                        });
                       }}
-                    >
-                      <input
-                        type="radio"
-                        name="project-basemap"
-                        value="standard"
-                        checked={localConfig.mapping.basemap === "standard"}
-                        onChange={() =>
-                          updateMapping({
-                            basemap: "standard",
-                          })
-                        }
-                      />
+                    />
 
-                      <span>Google Maps</span>
-                    </label>
-
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        cursor: isPending ? "default" : "pointer",
-                        opacity: isPending ? 0.6 : 1,
+                    <RadioRow
+                      label="Google Satellite"
+                      checked={localConfig.mapping.basemap === "satellite"}
+                      disabled={isPending}
+                      onChange={() => {
+                        updateMapping({
+                          basemap: "satellite",
+                        });
                       }}
-                    >
-                      <input
-                        type="radio"
-                        name="project-basemap"
-                        value="satellite"
-                        checked={localConfig.mapping.basemap === "satellite"}
-                        onChange={() =>
-                          updateMapping({
-                            basemap: "satellite",
-                          })
-                        }
-                      />
-
-                      <span>Google Satellite</span>
-                    </label>
+                    />
                   </div>
                 </div>
               )}
@@ -473,7 +458,7 @@ export function ProjectGlobalConfigPanel({
           <ConfigSectionHeader
             icon={<MapPin size={16} />}
             title="Surveillance terrain"
-            description="Suivi périodique du travail de l'agent."
+            description="Suivi périodique du travail des agents."
             open={openSections.agent_monitoring}
             onClick={() => toggleSection("agent_monitoring")}
           />
@@ -482,7 +467,7 @@ export function ProjectGlobalConfigPanel({
             <div style={sectionContentStyle}>
               <ToggleRow
                 label="Activer la surveillance terrain"
-                description="Active les mécanismes de suivi pendant la collecte."
+                description="Permet de suivre certains événements pendant la collecte."
                 checked={localConfig.agent_monitoring.enabled}
                 disabled={isPending}
                 onChange={(value) => {
@@ -525,6 +510,7 @@ export function ProjectGlobalConfigPanel({
                   <div style={subsectionTitleStyle}>Caméra</div>
 
                   <ToggleRow
+                    // eslint-disable-next-line jsx-a11y/alt-text
                     icon={<Image size={15} />}
                     label="Capturer périodiquement"
                     checked={localConfig.agent_monitoring.track_camera}
@@ -592,7 +578,7 @@ export function ProjectGlobalConfigPanel({
           <ConfigSectionHeader
             icon={<ShieldCheck size={16} />}
             title="Sécurité et anti-fraude"
-            description="Informations utilisées pour contrôler les collectes."
+            description="Contrôles globaux appliqués au projet."
             open={openSections.anti_fraud}
             onClick={() => toggleSection("anti_fraud")}
           />
@@ -668,7 +654,7 @@ export function ProjectGlobalConfigPanel({
             // eslint-disable-next-line jsx-a11y/alt-text
             icon={<Image size={16} />}
             title="Médias"
-            description="Types de médias autorisés dans les collectes."
+            description="Types de médias autorisés dans le projet."
             open={openSections.media}
             onClick={() => toggleSection("media")}
           />
@@ -714,10 +700,11 @@ export function ProjectGlobalConfigPanel({
             </div>
           )}
 
+          {/* ATTACHMENTS */}
           <ConfigSectionHeader
             icon={<Paperclip size={16} />}
             title="Fichiers attachés"
-            description="Autorisez les fichiers qui seront associés au projet."
+            description="Règle globale concernant les fichiers."
             open={openSections.attachments}
             onClick={() => toggleSection("attachments")}
           />
@@ -726,7 +713,7 @@ export function ProjectGlobalConfigPanel({
             <div style={sectionContentStyle}>
               <ToggleRow
                 label="Autoriser les fichiers attachés"
-                description="Permet d'associer des fichiers au projet."
+                description="Les formulaires pourront utiliser les fichiers attachés."
                 checked={localConfig.attachments.enabled}
                 disabled={isPending}
                 onChange={(value) => {
@@ -737,17 +724,64 @@ export function ProjectGlobalConfigPanel({
               />
 
               {localConfig.attachments.enabled && (
-                <ProjectAttachmentsSection
-                  projectId={projectId}
+                <AttachmentsSection
                   enabled={localConfig.attachments.enabled}
-                  disabled={isPending}
-                  onBeforeUpload={async () => {
-                    if (!onSaveConfig) {
-                      return true;
+                  disabled={isPending || projectFolderId === null}
+                  listFiles={async (): Promise<FileNode[]> => {
+                    if (projectFolderId === null) {
+                      throw new Error(
+                        "Le dossier de fichiers du projet est introuvable.",
+                      );
                     }
 
-                    return onSaveConfig(localConfig);
+                    const response =
+                      await fileSystemService.listChildren(projectFolderId);
+
+                    if (!response.data) {
+                      throw new Error(
+                        "Les fichiers du projet n'ont pas pu être récupérés.",
+                      );
+                    }
+
+                    return response.data.items.filter(
+                      (item) => item.type === "FILE",
+                    );
                   }}
+                  uploadFile={async (file) => {
+                    if (projectFolderId === null) {
+                      throw new Error(
+                        "Le dossier de fichiers du projet est introuvable.",
+                      );
+                    }
+
+                    const response = await fileSystemService.import(
+                      [file],
+                      [file.name],
+                      projectFolderId,
+                    );
+
+                    if (!response.data) {
+                      throw new Error(
+                        "Le fichier uploadé n'a pas pu être récupéré.",
+                      );
+                    }
+
+                    const uploadedFile = response.data.find(
+                      (item) => item.type === "FILE",
+                    );
+
+                    if (!uploadedFile) {
+                      throw new Error(
+                        "Le fichier uploadé n'a pas pu être récupéré.",
+                      );
+                    }
+
+                    return uploadedFile;
+                  }}
+                  deleteFile={async (fileId) => {
+                    await fileSystemService.delete(fileId);
+                  }}
+                  emptyMessage="Aucun fichier attaché à ce projet."
                 />
               )}
             </div>
@@ -812,16 +846,11 @@ function normalizeProjectGlobalConfig(
 
     geolocation: {
       enabled: config?.geolocation?.enabled ?? false,
-
       accuracy: config?.geolocation?.accuracy ?? null,
-
       capture_on_submit: config?.geolocation?.capture_on_submit ?? true,
-
       max_distance_between_points:
         config?.geolocation?.max_distance_between_points ?? null,
-
       min_points: config?.geolocation?.min_points ?? null,
-
       max_points: config?.geolocation?.max_points ?? null,
     },
 
@@ -832,28 +861,20 @@ function normalizeProjectGlobalConfig(
 
     agent_monitoring: {
       enabled: config?.agent_monitoring?.enabled ?? false,
-
       track_gps: config?.agent_monitoring?.track_gps ?? false,
-
       gps_interval_seconds:
         config?.agent_monitoring?.gps_interval_seconds ?? 30,
-
       track_camera: config?.agent_monitoring?.track_camera ?? false,
-
       camera_interval_seconds:
         config?.agent_monitoring?.camera_interval_seconds ?? 300,
-
       track_audio: config?.agent_monitoring?.track_audio ?? false,
-
       audio_clip_duration_seconds:
         config?.agent_monitoring?.audio_clip_duration_seconds ?? 10,
     },
 
     anti_fraud: {
       enabled: config?.anti_fraud?.enabled ?? false,
-
       capture_device_info: config?.anti_fraud?.capture_device_info ?? true,
-
       capture_location_history:
         config?.anti_fraud?.capture_location_history ?? false,
     },
@@ -864,9 +885,7 @@ function normalizeProjectGlobalConfig(
 
     media: {
       allow_photo: config?.media?.allow_photo ?? true,
-
       allow_video: config?.media?.allow_video ?? false,
-
       allow_audio: config?.media?.allow_audio ?? false,
     },
 
@@ -1050,6 +1069,46 @@ function ToggleRow({
         />
       </button>
     </div>
+  );
+}
+
+function RadioRow({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      <input
+        type="radio"
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+      />
+
+      <span
+        style={{
+          fontSize: "0.6875rem",
+          color: "var(--color-foreground)",
+        }}
+      >
+        {label}
+      </span>
+    </label>
   );
 }
 

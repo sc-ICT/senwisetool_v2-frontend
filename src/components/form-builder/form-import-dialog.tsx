@@ -15,7 +15,7 @@ import { formImportService } from "@/services/form-import.service";
 import type { FormImportResult } from "@/types/form-import";
 
 interface FormImportDialogProps {
-  projectId: number;
+  formId: number;
 
   onClose: () => void;
 
@@ -23,7 +23,7 @@ interface FormImportDialogProps {
 }
 
 export function FormImportDialog({
-  projectId,
+  formId,
   onClose,
   onImported,
 }: FormImportDialogProps) {
@@ -74,7 +74,7 @@ export function FormImportDialog({
     setResult(null);
 
     try {
-      const response = await formImportService.validate(projectId, file);
+      const response = await formImportService.validate(formId, file);
 
       if (!response.data) {
         throw new Error(
@@ -106,7 +106,7 @@ export function FormImportDialog({
     setError(null);
 
     try {
-      const response = await formImportService.execute(projectId, file);
+      const response = await formImportService.execute(formId, file);
 
       if (!response.data) {
         throw new Error("Le serveur n'a retourné aucun résultat d'import.");

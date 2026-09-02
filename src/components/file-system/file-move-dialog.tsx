@@ -41,10 +41,10 @@ export function FileMoveDialog({ node, onClose }: FileMoveDialogProps) {
    *
    * Nous en avons besoin pour empêcher :
    *
-   *   Projet A
-   *   └── Projet B
+   *   Formulaire A
+   *   └── Formulaire B
    *
-   * de déplacer Projet A dans Projet B.
+   * de déplacer Formulaire A dans Formulaire B.
    */
   const { data: descendants = [], isLoading: descendantsLoading } = useQuery({
     queryKey: ["files", "move-excluded", node.id],

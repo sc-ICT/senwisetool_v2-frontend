@@ -4,7 +4,7 @@ import type {
   DependencyAction,
   DependencyActionType,
   DependencyTargetType,
-} from "@/services/project-question-dependency.service";
+} from "@/services/form-question-dependency.service";
 
 interface DependencyActionQuestion {
   id: number;

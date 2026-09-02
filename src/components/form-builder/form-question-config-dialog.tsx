@@ -4,26 +4,26 @@ import { Loader2, Save, X } from "lucide-react";
 import { useState } from "react";
 
 import type {
-  ProjectQuestion,
-  ProjectQuestionConfig,
-} from "@/types/project-question";
+  FormQuestion,
+  FormQuestionConfig,
+} from "@/types/form-question";
 
 import { hasQuestionCapability } from "@/lib/form-builder/question-config";
 
-interface ProjectQuestionConfigDialogProps {
-  question: ProjectQuestion;
+interface FormQuestionConfigDialogProps {
+  question: FormQuestion;
   isPending: boolean;
   onClose: () => void;
-  onSubmit: (config: ProjectQuestionConfig) => void;
+  onSubmit: (config: FormQuestionConfig) => void;
 }
 
-export function ProjectQuestionConfigDialog({
+export function FormQuestionConfigDialog({
   question,
   isPending,
   onClose,
   onSubmit,
-}: ProjectQuestionConfigDialogProps) {
-  const [config, setConfig] = useState<ProjectQuestionConfig>(
+}: FormQuestionConfigDialogProps) {
+  const [config, setConfig] = useState<FormQuestionConfig>(
     createLocalConfig(question.config),
   );
 
@@ -183,7 +183,7 @@ export function ProjectQuestionConfigDialog({
               canMaxLength) && (
               <ConfigSection
                 title="Validation"
-                description="Contraintes appliquées à la réponse dans ce projet."
+                description="Contraintes appliquées à la réponse dans ce formulaire."
               >
                 {canRequired && (
                   <ToggleField
@@ -495,7 +495,7 @@ export function ProjectQuestionConfigDialog({
             {(canPlaceholder || canHelpText || canReadonly) && (
               <ConfigSection
                 title="Affichage"
-                description="Personnalisez le comportement de la question dans ce projet."
+                description="Personnalisez le comportement de la question dans ce formulaire."
               >
                 {canPlaceholder && (
                   <TextField
@@ -569,7 +569,7 @@ export function ProjectQuestionConfigDialog({
                   }}
                 >
                   Cette question n&#39;a pas encore de paramètres spécifiques
-                  configurables dans le Projet.
+                  configurables dans le Formulaire.
                 </div>
               )}
           </div>
@@ -845,8 +845,8 @@ function TextAreaField({
 }
 
 function createLocalConfig(
-  config: ProjectQuestionConfig,
-): ProjectQuestionConfig {
+  config: FormQuestionConfig,
+): FormQuestionConfig {
   return {
     validation: {
       required: config.validation?.required ?? false,
@@ -875,7 +875,7 @@ function createLocalConfig(
 }
 
 function sanitizeConfig(
-  config: ProjectQuestionConfig,
+  config: FormQuestionConfig,
   capabilities: {
     canRequired: boolean;
     canMinValue: boolean;
@@ -887,7 +887,7 @@ function sanitizeConfig(
     canReadonly: boolean;
     canDefaultValue: boolean;
   },
-): ProjectQuestionConfig {
+): FormQuestionConfig {
   return {
     validation: {
       required: capabilities.canRequired ? config.validation.required : false,

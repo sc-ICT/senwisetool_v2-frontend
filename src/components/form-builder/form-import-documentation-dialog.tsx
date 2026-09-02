@@ -944,7 +944,7 @@ function JsonSection({
     "name": "Identification"
   },
 
-  "project_question": {
+  "form_question": {
     "config": {}
   },
 
@@ -975,7 +975,7 @@ function JsonSection({
             "Section du formulaire dans laquelle la question doit être placée.",
           ],
           [
-            "project_question",
+            "form_question",
             "Configuration de la question une fois ajoutée au formulaire courant.",
           ],
           ["dependencies", "Relations de dépendance avec d'autres questions."],
@@ -1542,7 +1542,7 @@ function ExampleSection({
     "name": "Plantations"
   },
 
-  "project_question": {
+  "form_question": {
     "config": {}
   },
 
