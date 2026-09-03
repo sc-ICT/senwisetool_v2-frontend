@@ -2,6 +2,7 @@
 
 import { FormCreateDialog } from "@/components/form-builder/form-create-dialog";
 import { Header } from "@/components/layout/header";
+import { ProjectAgentsSection } from "@/components/project/project-agents-section";
 import { ProjectGlobalConfigPanel } from "@/components/project/project-global-config-panel";
 import { ApiError } from "@/lib/api";
 import { formService } from "@/services/form.service";
@@ -597,6 +598,15 @@ export default function ProjectDetailPage() {
           <InfoCard label="Type" value={project.project_type} />
           <InfoCard label="Statut" value={project.status} />
         </section>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Agents affectés                                                  */}
+        {/* ---------------------------------------------------------------- */}
+
+        <ProjectAgentsSection
+          projectId={projectId}
+          projectFolderId={project.project_folder_id}
+        />
 
         {/* ---------------------------------------------------------------- */}
         {/* Formulaires                                                      */}

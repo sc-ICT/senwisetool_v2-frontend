@@ -824,20 +824,6 @@ export default function AgentsPage() {
                     >
                       Agent
                     </th>
-                    <th
-                      style={{
-                        padding: "0.75rem 1.25rem",
-                        textAlign: "left",
-                        fontSize: "0.6875rem",
-                        fontWeight: 600,
-                        color: "var(--color-foreground-muted)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                        borderBottom: "1px solid var(--color-border)",
-                      }}
-                    >
-                      Agent
-                    </th>
 
                     <th
                       style={{
@@ -1056,6 +1042,7 @@ export default function AgentsPage() {
                         style={{
                           position: "relative",
                           textAlign: "right",
+                          marginLeft: "1rem",
                         }}
                       >
                         <button
@@ -1092,7 +1079,6 @@ export default function AgentsPage() {
                             alignItems: "center",
                             justifyContent: "center",
                             cursor: "pointer",
-                            marginLeft: "auto",
                           }}
                         >
                           <MoreVertical size={17} />
