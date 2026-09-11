@@ -14,6 +14,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   LogOut,
+  Puzzle,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -84,6 +85,13 @@ const NAV: NavItem[] = [
     href: "/dashboard/agents",
     icon: Users,
     label: "Agents",
+    exact: false,
+    type: "link",
+  },
+  {
+    href: "/dashboard/plugins",
+    icon: Puzzle,
+    label: "Plugins",
     exact: false,
     type: "link",
   },
