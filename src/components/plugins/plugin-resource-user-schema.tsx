@@ -485,7 +485,7 @@ export function PluginResourceUserSchema({ resourceId, enabled }: Props) {
 
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Vous pouvez adapter le schéma de cette ressource uniquement parce
-            que l'administrateur a autorisé cette personnalisation.
+            que l&#39;administrateur a autorisé cette personnalisation.
           </p>
         </div>
 

@@ -84,14 +84,17 @@ export function PluginResourceExcelImport({
         file,
       );
 
-      const data = response.data;
+      const data = response.data ?? {
+        imported: 0,
+        rejected: 0,
+      };
 
       setResult({
-        imported: data.imported,
-        rejected: data.rejected,
+        imported: data.imported ?? 0,
+        rejected: data.rejected ?? 0,
       });
 
-      toast.success(`${data.imported} donnée(s) importée(s) avec succès.`);
+      toast.success(`${data.imported ?? 0} donnée(s) importée(s) avec succès.`);
 
       setFile(null);
 
@@ -223,7 +226,7 @@ export function PluginResourceExcelImport({
 
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  Résultat de l&apos;import
+                  Résultat de l&#39;import
                 </p>
 
                 <p className="mt-1 text-sm text-muted-foreground">

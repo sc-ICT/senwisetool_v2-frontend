@@ -330,8 +330,8 @@ export default function PluginResourcePage() {
               </p>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Ce plugin n'est pas en brouillon. La configuration structurelle
-                de la ressource ne peut plus être modifiée.
+                Ce plugin n&#39;est pas en brouillon. La configuration
+                structurelle de la ressource ne peut plus être modifiée.
               </p>
             </div>
           </div>
@@ -708,7 +708,7 @@ export default function PluginResourcePage() {
 
             <div>
               <p className="text-sm font-semibold text-foreground">
-                Règle d'import
+                Règle d&#39;import
               </p>
 
               <p className="mt-1 text-sm text-muted-foreground">
