@@ -1,3 +1,5 @@
+import type { PluginParameters } from "@/types/plugin-settings";
+
 export type PluginStatus = "DRAFT" | "PUBLISHED" | "UNPUBLISHED" | "ARCHIVED";
 
 export type PluginVersionStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
@@ -41,7 +43,7 @@ export interface Plugin {
   banner_url: string | null;
   category: string | null;
   tags: string[];
-  parameters: Record<string, unknown>;
+  parameters: PluginParameters;
   metadata_config: Record<string, unknown>;
   status: PluginStatus;
   is_public: boolean;
@@ -61,7 +63,7 @@ export interface PluginCreate {
   banner_url?: string | null;
   category?: string | null;
   tags?: string[];
-  parameters?: Record<string, unknown>;
+  parameters?: PluginParameters;
   metadata_config?: Record<string, unknown>;
   initial_version?: string;
   release_notes?: string | null;
@@ -75,7 +77,7 @@ export interface PluginUpdate {
   banner_url?: string | null;
   category?: string | null;
   tags?: string[];
-  parameters?: Record<string, unknown>;
+  parameters?: PluginParameters;
   metadata_config?: Record<string, unknown>;
 }
 

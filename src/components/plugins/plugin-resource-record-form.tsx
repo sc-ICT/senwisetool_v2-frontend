@@ -521,7 +521,20 @@ export function PluginResourceRecordForm({
         <button
           type="submit"
           disabled={disabled || isPending}
-          className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium text-white gradient-brand glow-primary disabled:opacity-50"
+          style={{
+            background: "var(--color-surface-raised)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-foreground)",
+            padding: "0.5rem 1rem",
+            borderRadius: "0.75rem",
+            fontSize: "0.8125rem",
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: "pointer",
+            transition: "background 0.2s, border-color 0.2s",
+          }}
         >
           {isPending ? (
             <Loader2 size={16} className="animate-spin" />

@@ -269,7 +269,20 @@ export function PluginResourceDialog({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium text-white gradient-brand glow-primary disabled:opacity-50"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                height: "36px",
+                padding: "0 0.875rem",
+                borderRadius: "0.625rem",
+                border: "1px solid var(--color-border)",
+                background: "var(--color-surface-raised)",
+                color: "var(--color-foreground)",
+                textDecoration: "none",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+              }}
             >
               {pending ? (
                 <Loader2 size={16} className="animate-spin" />

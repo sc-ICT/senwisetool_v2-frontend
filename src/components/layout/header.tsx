@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/stores/auth.store";
-import { Moon, MoveLeft, Sun } from "lucide-react";
+import { ArrowLeft, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
@@ -64,15 +64,9 @@ export function Header({ title, description, backTo, actions }: HeaderProps) {
         {backTo && (
           <Link
             href={backTo}
-            style={{
-              color: "var(--color-foreground)",
-              display: "flex",
-              alignItems: "center",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
+            className="inline-flex h-8 items-center gap-2 rounded-xl border border-border bg-card px-2 text-sm font-medium text-foreground hover:bg-muted"
           >
-            <MoveLeft size={20} />
+            <ArrowLeft size={20} />
           </Link>
         )}
         <div>

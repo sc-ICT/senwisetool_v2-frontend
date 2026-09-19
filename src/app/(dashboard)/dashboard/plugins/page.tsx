@@ -833,6 +833,7 @@ export default function PluginsPage() {
                           <button
                             type="button"
                             onClick={(event) => {
+                              event.stopPropagation();
                               handleMenuToggle(event, plugin);
                             }}
                             aria-label={`Actions pour ${plugin.name}`}
@@ -860,7 +861,8 @@ export default function PluginsPage() {
                             <>
                               <div
                                 aria-hidden="true"
-                                onMouseDown={() => {
+                                onMouseDown={(event) => {
+                                  event.stopPropagation();
                                   closeMenu();
                                 }}
                                 style={{
@@ -871,17 +873,26 @@ export default function PluginsPage() {
                                 }}
                               />
 
-                              <PluginContextMenu
-                                plugin={plugin}
-                                position={menuPosition}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
-                                onLifecycle={openLifecycleDialog}
-                                onVersionHistory={(selectedPlugin) => {
-                                  closeMenu();
-                                  setVersionHistoryPlugin(selectedPlugin);
+                              <div
+                                onClick={(event) => {
+                                  event.stopPropagation();
                                 }}
-                              />
+                                onMouseDown={(event) => {
+                                  event.stopPropagation();
+                                }}
+                              >
+                                <PluginContextMenu
+                                  plugin={plugin}
+                                  position={menuPosition}
+                                  onEdit={handleEdit}
+                                  onDelete={handleDelete}
+                                  onLifecycle={openLifecycleDialog}
+                                  onVersionHistory={(selectedPlugin) => {
+                                    closeMenu();
+                                    setVersionHistoryPlugin(selectedPlugin);
+                                  }}
+                                />
+                              </div>
                             </>
                           ) : null}
                         </td>

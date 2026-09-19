@@ -12,16 +12,16 @@ import type {
   PluginResourceRecordCreate,
   PluginResourceRecordListResponse,
   PluginResourceRecordUpdate,
+  PluginResourceRelatedRecordsResponse,
+  PluginResourceRelation,
+  PluginResourceRelationCreate,
   PluginResourceUpdate,
   PluginResourceUserSchema,
   PluginResourceUserSchemaUpdate,
+  PluginResourceWorkbookImportResponse,
 } from "@/types/plugin-resource";
 
 export const pluginResourceService = {
-  /* ============================================================
-   * RESOURCES
-   * ========================================================== */
-
   async list(
     pluginId: number,
   ): Promise<ApiResponse<PluginResourceListResponse>> {
@@ -55,10 +55,6 @@ export const pluginResourceService = {
     return api.delete<null>(`/plugins/resources/${resourceId}`);
   },
 
-  /* ============================================================
-   * FIELDS
-   * ========================================================== */
-
   async addField(
     resourceId: number,
     payload: PluginResourceFieldCreate,
@@ -89,10 +85,6 @@ export const pluginResourceService = {
     );
   },
 
-  /* ============================================================
-   * EFFECTIVE SCHEMA
-   * ========================================================== */
-
   async getEffectiveSchema(
     resourceId: number,
   ): Promise<ApiResponse<PluginResourceEffectiveSchema>> {
@@ -100,10 +92,6 @@ export const pluginResourceService = {
       `/plugins/resources/${resourceId}/schema/effective`,
     );
   },
-
-  /* ============================================================
-   * USER SCHEMA OVERRIDE
-   * ========================================================== */
 
   async updateUserSchema(
     resourceId: number,
@@ -118,10 +106,6 @@ export const pluginResourceService = {
   async resetUserSchema(resourceId: number): Promise<ApiResponse<null>> {
     return api.delete<null>(`/plugins/resources/${resourceId}/schema/override`);
   },
-
-  /* ============================================================
-   * RECORDS
-   * ========================================================== */
 
   async listRecords(
     resourceId: number,
@@ -161,10 +145,6 @@ export const pluginResourceService = {
     );
   },
 
-  /* ============================================================
-   * EXCEL
-   * ========================================================== */
-
   async importExcel(
     resourceId: number,
     file: File,
@@ -176,6 +156,61 @@ export const pluginResourceService = {
     return api.upload<PluginResourceImportResponse>(
       `/plugins/resources/${resourceId}/records/import`,
       formData,
+    );
+  },
+
+  async importWorkbook(
+    pluginId: number,
+    file: File,
+  ): Promise<ApiResponse<PluginResourceWorkbookImportResponse>> {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    return api.upload<PluginResourceWorkbookImportResponse>(
+      `/plugins/${pluginId}/resources/import-definitions`,
+      formData,
+    );
+  },
+
+  async exportResourceData(resourceId: number): Promise<Blob> {
+    return api.getBlob(`/plugins/resources/${resourceId}/export`);
+  },
+
+  async listRelations(
+    resourceId: number,
+  ): Promise<ApiResponse<PluginResourceRelation[]>> {
+    return api.get<PluginResourceRelation[]>(
+      `/plugins/resources/${resourceId}/relations`,
+    );
+  },
+
+  async createRelation(
+    resourceId: number,
+    payload: PluginResourceRelationCreate,
+  ): Promise<ApiResponse<PluginResourceRelation>> {
+    return api.post<PluginResourceRelation>(
+      `/plugins/resources/${resourceId}/relations`,
+      payload,
+    );
+  },
+
+  async deleteRelation(
+    resourceId: number,
+    relationId: number,
+  ): Promise<ApiResponse<null>> {
+    return api.delete<null>(
+      `/plugins/resources/${resourceId}/relations/${relationId}`,
+    );
+  },
+
+  async getRelatedRecords(
+    resourceId: number,
+    recordId: number,
+    relationId: number,
+  ): Promise<ApiResponse<PluginResourceRelatedRecordsResponse>> {
+    return api.get<PluginResourceRelatedRecordsResponse>(
+      `/plugins/resources/${resourceId}/records/${recordId}/relations/${relationId}`,
     );
   },
 };

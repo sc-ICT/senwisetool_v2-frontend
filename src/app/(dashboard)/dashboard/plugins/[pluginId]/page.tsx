@@ -1,9 +1,17 @@
 "use client";
 
+import { Header } from "@/components/layout/header";
+import { PluginResourceDialog } from "@/components/plugins/plugin-resource-dialog";
+import { PluginResourceWorkbookImport } from "@/components/plugins/plugin-resource-workbook-import";
+import { PluginWorkspaceNav } from "@/components/plugins/plugin-workspace-nav";
+import { ApiError } from "@/lib/api";
 import { pluginResourceService } from "@/services/plugin-resource.service";
-import type { PluginResourceCreate } from "@/types/plugin-resource";
+import { pluginService } from "@/services/plugin.service";
+import type {
+  PluginResourceCreate,
+  PluginResourceSection,
+} from "@/types/plugin-resource";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import {
   ArrowLeft,
   Database,
@@ -16,24 +24,19 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-
-import { ApiError } from "@/lib/api";
-
-import { Header } from "@/components/layout/header";
-import { PluginResourceDialog } from "@/components/plugins/plugin-resource-dialog";
-import { pluginService } from "@/services/plugin.service";
 import { toast } from "sonner";
 
-export default function PluginConfigurationPage() {
+export default function PluginResourcesPage() {
   const params = useParams();
-
   const router = useRouter();
-
   const queryClient = useQueryClient();
 
   const pluginId = Number(params.pluginId);
 
   const [isCreateResourceOpen, setIsCreateResourceOpen] = useState(false);
+  const [resourceIsDeletingId, setResourceIsDeletingId] = useState<
+    number | null
+  >(null);
 
   const pluginQuery = useQuery({
     queryKey: ["plugin", pluginId],
@@ -80,18 +83,20 @@ export default function PluginConfigurationPage() {
     },
 
     onError: (error) => {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-        return;
-      }
-
-      toast.error("Impossible de créer la ressource.");
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Impossible de créer la ressource.",
+      );
     },
   });
 
   const deleteResourceMutation = useMutation({
-    mutationFn: (resourceId: number) =>
-      pluginResourceService.delete(resourceId),
+    mutationFn: (resourceId: number) => {
+      setResourceIsDeletingId(resourceId);
+
+      return pluginResourceService.delete(resourceId);
+    },
 
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -99,28 +104,22 @@ export default function PluginConfigurationPage() {
       });
 
       toast.success("Ressource supprimée avec succès.");
+      setResourceIsDeletingId(null);
     },
 
     onError: (error) => {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-        return;
-      }
-
-      toast.error("Impossible de supprimer la ressource.");
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Impossible de supprimer la ressource.",
+      );
+      setResourceIsDeletingId(null);
     },
   });
 
   if (pluginQuery.isLoading || resourcesQuery.isLoading) {
     return (
-      <div
-        style={{
-          minHeight: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div className="flex min-h-full items-center justify-center">
         <Loader2 size={24} className="animate-spin" />
       </div>
     );
@@ -134,20 +133,10 @@ export default function PluginConfigurationPage() {
           description="Impossible de récupérer les informations du plugin."
         />
 
-        <div
-          style={{
-            padding: "1.5rem",
-          }}
-        >
+        <div className="p-6">
           <Link
             href="/dashboard/plugins"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              textDecoration: "none",
-              color: "var(--color-foreground)",
-            }}
+            className="inline-flex items-center gap-2 text-sm font-medium"
           >
             <ArrowLeft size={16} />
             Retour aux plugins
@@ -178,467 +167,233 @@ export default function PluginConfigurationPage() {
         description={
           plugin.short_description ||
           plugin.description ||
-          "Configuration du plugin."
+          "Configuration des ressources du plugin."
         }
         actions={
-          <Link
-            href="/dashboard/plugins"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              height: "36px",
-              padding: "0 0.875rem",
-              borderRadius: "0.625rem",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-surface-raised)",
-              color: "var(--color-foreground)",
-              textDecoration: "none",
-              fontSize: "0.8125rem",
-              fontWeight: 600,
-            }}
-          >
-            <ArrowLeft size={16} />
-            Retour
-          </Link>
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <PluginResourceWorkbookImport
+                pluginId={pluginId}
+                disabled={!isDraft}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsCreateResourceOpen(true)}
+              disabled={createResourceMutation.isPending || !isDraft}
+              style={{
+                height: "36px",
+                padding: "0 0.875rem",
+                borderRadius: "0.625rem",
+                border: "1px solid rgba(93, 184, 58, 0.25)",
+                background: "rgba(93, 184, 58, 0.1)",
+                color: "#5DB83A",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                cursor: createResourceMutation.isPending
+                  ? "not-allowed"
+                  : "pointer",
+                opacity: createResourceMutation.isPending ? 0.6 : 1,
+              }}
+            >
+              <Plus size={16} />
+              Nouvelle ressource
+            </button>
+          </>
         }
+        backTo="/dashboard/plugins"
       />
 
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "1.5rem",
-        }}
-      >
+      <div className="flex-1 overflow-auto p-6">
+        <PluginWorkspaceNav pluginId={pluginId} />
+
         {!isDraft && (
-          <div
-            style={{
-              marginBottom: "1.5rem",
-              padding: "0.875rem 1rem",
-              borderRadius: "0.75rem",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-surface-raised)",
-              fontSize: "0.8125rem",
-              color: "var(--color-foreground-muted)",
-            }}
-          >
+          <div className="mb-6 rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
             Ce plugin n&#39;est pas en brouillon. La configuration est
             actuellement en lecture seule.
           </div>
         )}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "1rem",
-            marginBottom: "2rem",
-          }}
-        >
-          <div
-            style={{
-              padding: "1rem",
-              borderRadius: "0.875rem",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-surface-raised)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.625rem",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <Database size={18} />
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold">Ressources</h2>
 
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--color-foreground-muted)",
-                }}
-              >
-                Ressources
-              </span>
-            </div>
-
-            <strong
-              style={{
-                fontSize: "1.5rem",
-              }}
-            >
-              {resources.length}
-            </strong>
-          </div>
-
-          <div
-            style={{
-              padding: "1rem",
-              borderRadius: "0.875rem",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-surface-raised)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.625rem",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <FileCode2 size={18} />
-
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--color-foreground-muted)",
-                }}
-              >
-                Ressources globales
-              </span>
-            </div>
-
-            <strong
-              style={{
-                fontSize: "1.5rem",
-              }}
-            >
-              {globalResources.length}
-            </strong>
-          </div>
-
-          <div
-            style={{
-              padding: "1rem",
-              borderRadius: "0.875rem",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-surface-raised)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.625rem",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <Settings size={18} />
-
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--color-foreground-muted)",
-                }}
-              >
-                Ressources utilisateur
-              </span>
-            </div>
-
-            <strong
-              style={{
-                fontSize: "1.5rem",
-              }}
-            >
-              {userResources.length}
-            </strong>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Configurez les ressources, leurs schemas, relations et données de
+              votre plugin.
+            </p>
           </div>
         </div>
 
-        <section
-          style={{
-            marginBottom: "2rem",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "1rem",
-              marginBottom: "1rem",
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                }}
-              >
-                Ressources globales
-              </h2>
+        <div className="mb-8 grid gap-4 md:grid-cols-3">
+          <SummaryCard
+            icon={<Database size={18} />}
+            label="Ressources"
+            value={resources.length}
+          />
 
-              <p
-                style={{
-                  margin: "0.25rem 0 0",
-                  fontSize: "0.8125rem",
-                  color: "var(--color-foreground-muted)",
-                }}
-              >
-                Données communes gérées par l&#39;administrateur.
-              </p>
-            </div>
+          <SummaryCard
+            icon={<FileCode2 size={18} />}
+            label="Ressources globales"
+            value={globalResources.length}
+          />
 
-            <button
-              type="button"
-              disabled={!isDraft}
-              onClick={() => setIsCreateResourceOpen(true)}
-              style={{
-                background: "var(--color-surface-raised)",
-                border: "1px solid var(--color-border)",
-                color: "var(--color-foreground)",
-                padding: "0.5rem 1rem",
-                borderRadius: "0.75rem",
-                fontSize: "0.8125rem",
-                fontWeight: 600,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                cursor: "pointer",
-                transition: "background 0.2s, border-color 0.2s",
-              }}
-            >
-              <Plus size={18} />
-              Ajouter une ressource
-            </button>
-          </div>
+          <SummaryCard
+            icon={<Settings size={18} />}
+            label="Ressources utilisateur"
+            value={userResources.length}
+          />
+        </div>
 
-          {globalResources.length === 0 ? (
-            <div
-              style={{
-                padding: "2rem",
-                textAlign: "center",
-                borderRadius: "0.875rem",
-                border: "1px dashed var(--color-border)",
-                color: "var(--color-foreground-muted)",
-                fontSize: "0.8125rem",
-              }}
-            >
-              Aucune ressource globale configurée.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: "1rem",
-              }}
-            >
-              {globalResources.map((resource) => (
-                <div
-                  key={resource.id}
-                  onClick={() =>
-                    router.push(
-                      `/dashboard/plugins/${plugin.id}/resources/${resource.id}`,
-                    )
-                  }
-                  style={{
-                    padding: "1rem",
-                    borderRadius: "0.875rem",
-                    border: "1px solid var(--color-border)",
-                    background: "var(--color-surface-raised)",
-                  }}
-                >
-                  <strong>{resource.name}</strong>
+        <ResourceSection
+          title="Ressources globales"
+          description="Données communes gérées par l'administrateur."
+          resources={globalResources}
+          pluginId={pluginId}
+          isDraft={isDraft}
+          resourceIsDeletingId={resourceIsDeletingId}
+          onDelete={(id) => deleteResourceMutation.mutate(id)}
+        />
 
-                  <p
-                    style={{
-                      margin: "0.5rem 0",
-                      fontSize: "0.8125rem",
-                      color: "var(--color-foreground-muted)",
-                    }}
-                  >
-                    {resource.description || "Aucune description."}
-                  </p>
+        <ResourceSection
+          title="Ressources utilisateur"
+          description="Données pouvant être propres aux utilisateurs."
+          resources={userResources}
+          pluginId={pluginId}
+          isDraft={isDraft}
+          resourceIsDeletingId={resourceIsDeletingId}
+          onDelete={(id) => deleteResourceMutation.mutate(id)}
+        />
 
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      marginTop: "0.75rem",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--color-foreground-muted)",
-                      }}
-                    >
-                      {resource.fields.length} champ
-                      {resource.fields.length > 1 ? "s" : ""}
-                    </span>
+        <PluginResourceDialog
+          open={isCreateResourceOpen}
+          onClose={() => setIsCreateResourceOpen(false)}
+          onSubmit={(payload) => createResourceMutation.mutate(payload)}
+          pending={createResourceMutation.isPending}
+        />
+      </div>
+    </>
+  );
+}
 
-                    <button
-                      type="button"
-                      disabled={!isDraft || deleteResourceMutation.isPending}
-                      onClick={(event) => {
-                        event.stopPropagation();
-
-                        const confirmed = window.confirm(
-                          `Voulez-vous supprimer la ressource « ${resource.name} » ?`,
-                        );
-
-                        if (!confirmed) {
-                          return;
-                        }
-
-                        deleteResourceMutation.mutate(resource.id);
-                      }}
-                      title="Supprimer la ressource"
-                      aria-label={`Supprimer la ressource ${resource.name}`}
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
-                    >
-                      {deleteResourceMutation.isPending ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={15} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <div
-            style={{
-              marginBottom: "1rem",
-            }}
-          >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "1rem",
-                fontWeight: 700,
-              }}
-            >
-              Ressources utilisateur
-            </h2>
-
-            <p
-              style={{
-                margin: "0.25rem 0 0",
-                fontSize: "0.8125rem",
-                color: "var(--color-foreground-muted)",
-              }}
-            >
-              Données propres à chaque utilisateur du plugin.
-            </p>
-          </div>
-
-          {userResources.length === 0 ? (
-            <div
-              style={{
-                padding: "2rem",
-                textAlign: "center",
-                borderRadius: "0.875rem",
-                border: "1px dashed var(--color-border)",
-                color: "var(--color-foreground-muted)",
-                fontSize: "0.8125rem",
-              }}
-            >
-              Aucune ressource utilisateur configurée.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: "1rem",
-              }}
-            >
-              {userResources.map((resource) => (
-                <div
-                  key={resource.id}
-                  style={{
-                    padding: "1rem",
-                    borderRadius: "0.875rem",
-                    border: "1px solid var(--color-border)",
-                    background: "var(--color-surface-raised)",
-                  }}
-                >
-                  <strong>{resource.name}</strong>
-
-                  <p
-                    style={{
-                      margin: "0.5rem 0",
-                      fontSize: "0.8125rem",
-                      color: "var(--color-foreground-muted)",
-                    }}
-                  >
-                    {resource.description || "Aucune description."}
-                  </p>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--color-foreground-muted)",
-                      }}
-                    >
-                      {resource.fields.length} champ
-                      {resource.fields.length > 1 ? "s" : ""}
-                    </span>
-
-                    <span
-                      style={{
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {resource.allow_user_schema_override
-                        ? "Personnalisation autorisée"
-                        : "Configuration admin"}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={!isDraft || deleteResourceMutation.isPending}
-                    onClick={() => {
-                      const confirmed = window.confirm(
-                        `Voulez-vous supprimer la ressource « ${resource.name} » ?`,
-                      );
-
-                      if (!confirmed) {
-                        return;
-                      }
-
-                      deleteResourceMutation.mutate(resource.id);
-                    }}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+function SummaryCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <span className="text-xs">{label}</span>
       </div>
 
-      <PluginResourceDialog
-        open={isCreateResourceOpen}
-        pending={createResourceMutation.isPending}
-        onClose={() => setIsCreateResourceOpen(false)}
-        onSubmit={(payload) => createResourceMutation.mutate(payload)}
-      />
-    </>
+      <strong className="text-2xl">{value}</strong>
+    </div>
+  );
+}
+
+function ResourceSection({
+  title,
+  description,
+  pluginId,
+  resources,
+  isDraft,
+  resourceIsDeletingId,
+  onDelete,
+}: {
+  title: string;
+  description: string;
+  pluginId: number;
+  resources: Array<PluginResourceSection>;
+  isDraft: boolean;
+  resourceIsDeletingId: number | null;
+  onDelete: (resourceId: number) => void;
+}) {
+  const handleDelete = (resource: PluginResourceSection) => {
+    if (
+      !window.confirm(
+        `Voulez-vous vraiment supprimer la ressource ${resource.name} ?`,
+      )
+    ) {
+      return;
+    }
+
+    onDelete(resource.id);
+  };
+
+  return (
+    <section className="mb-8">
+      <div className="mb-4">
+        <h3 className="text-base font-semibold">{title}</h3>
+
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      </div>
+
+      {resources.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          Aucune ressource.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {resources.map((resource) => (
+            <div
+              key={resource.id}
+              className="rounded-2xl border border-border bg-card p-5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h4 className="truncate font-semibold">{resource.name}</h4>
+
+                  <code className="mt-1 block text-xs text-muted-foreground">
+                    {resource.key}
+                  </code>
+                </div>
+
+                {isDraft && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(resource)}
+                    className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {resourceIsDeletingId === resource.id ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
+                )}
+              </div>
+
+              <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+                {resource.description || "Aucune description."}
+              </p>
+
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {resource.fields.length} champ(s)
+                </span>
+
+                <Link
+                  href={`/dashboard/plugins/${pluginId}/resources/${resource.id}`}
+                  className="text-xs font-semibold text-primary"
+                >
+                  Ouvrir →
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

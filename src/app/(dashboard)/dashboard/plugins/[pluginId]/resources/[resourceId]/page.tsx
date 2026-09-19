@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Database,
-  FileSpreadsheet,
+  Download,
   Loader2,
   Lock,
   Pencil,
@@ -18,9 +18,9 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Header } from "@/components/layout/header";
-import { PluginResourceExcelImport } from "@/components/plugins/plugin-resource-excel-import";
 import { PluginResourceRecordForm } from "@/components/plugins/plugin-resource-record-form";
 import { PluginResourceRecordTable } from "@/components/plugins/plugin-resource-record-table";
+import { PluginResourceRelations } from "@/components/plugins/plugin-resource-relations";
 import { PluginResourceSchemaBuilder } from "@/components/plugins/plugin-resource-schema-builder";
 import { PluginResourceUserSchema } from "@/components/plugins/plugin-resource-user-schema";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +130,18 @@ export default function PluginResourcePage() {
     enabled: Number.isInteger(resourceId),
   });
 
+  const resourcesQuery = useQuery({
+    queryKey: ["plugin-resources", pluginId],
+
+    queryFn: async () => {
+      const response = await pluginResourceService.list(pluginId);
+
+      return response.data;
+    },
+
+    enabled: Number.isInteger(pluginId),
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({
       resourceId,
@@ -164,6 +176,38 @@ export default function PluginResourcePage() {
     },
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => pluginResourceService.exportResourceData(resourceId),
+
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+
+      const anchor = document.createElement("a");
+
+      anchor.href = url;
+
+      anchor.download = `resource-${resourceId}-data.zip`;
+
+      document.body.appendChild(anchor);
+
+      anchor.click();
+
+      anchor.remove();
+
+      URL.revokeObjectURL(url);
+
+      toast.success("Export des données terminé.");
+    },
+
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Impossible d'exporter les données.",
+      );
+    },
+  });
+
   if (pluginQuery.isLoading || resourceQuery.isLoading) {
     return (
       <div className="flex min-h-full items-center justify-center">
@@ -175,6 +219,8 @@ export default function PluginResourcePage() {
   const plugin = pluginQuery.data;
 
   const resource = resourceQuery.data;
+
+  const resources = resourcesQuery.data?.items ?? [];
 
   if (!plugin || !resource) {
     return (
@@ -308,15 +354,7 @@ export default function PluginResourcePage() {
         description={
           resource.description || "Configuration et données de la ressource."
         }
-        actions={
-          <Link
-            href={`/dashboard/plugins/${pluginId}`}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted"
-          >
-            <ArrowLeft size={16} />
-            Retour au plugin
-          </Link>
-        }
+        backTo={`/dashboard/plugins/${pluginId}`}
       />
 
       <div className="flex-1 overflow-auto p-6">
@@ -579,7 +617,20 @@ export default function PluginResourcePage() {
                 <button
                   type="submit"
                   disabled={updateMutation.isPending}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium text-white gradient-brand glow-primary disabled:opacity-50"
+                  style={{
+                    background: "var(--color-surface-raised)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-foreground)",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "0.75rem",
+                    fontSize: "0.8125rem",
+                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    cursor: "pointer",
+                    transition: "background 0.2s, border-color 0.2s",
+                  }}
                 >
                   {updateMutation.isPending ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -612,6 +663,12 @@ export default function PluginResourcePage() {
 
         <Card className="mb-6">
           <div className="px-6 py-5">
+            <PluginResourceRelations
+              resource={resource}
+              resources={resources}
+              editable={canEdit}
+            />
+
             <PluginResourceSchemaBuilder
               resource={resource}
               editable={canEdit}
@@ -637,19 +694,42 @@ export default function PluginResourcePage() {
          * ========================================================== */}
 
         <div className="mb-6">
-          <div className="mb-4 flex items-center gap-3">
-            <Database size={19} className="text-primary" />
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Database size={19} className="text-primary" />
 
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                Gestion des données
-              </h2>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Gestion des données
+                </h2>
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Enregistrez les données individuellement ou importez-les depuis
-                Excel.
-              </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Enregistrez les données individuellement ou importez-les
+                  depuis Excel.
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              disabled={
+                exportMutation.isPending ||
+                recordsQuery.isLoading ||
+                records.length === 0
+              }
+              onClick={() => exportMutation.mutate()}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exportMutation.isPending ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Download size={15} />
+              )}
+
+              {exportMutation.isPending
+                ? "Exportation..."
+                : "Exporter les données"}
+            </button>
           </div>
 
           {isSchemaLoading ? (
@@ -684,40 +764,8 @@ export default function PluginResourcePage() {
                   onEdit={openEditRecord}
                 />
               </div>
-
-              <PluginResourceExcelImport
-                resourceId={resource.id}
-                onImported={async () => {
-                  await recordsQuery.refetch();
-                }}
-              />
             </>
           )}
-        </div>
-
-        {/* ============================================================
-         * DATA RULES
-         * ========================================================== */}
-
-        <div className="mb-8 rounded-2xl border border-border bg-muted/10 px-5 py-4">
-          <div className="flex items-start gap-3">
-            <FileSpreadsheet
-              size={18}
-              className="mt-0.5 shrink-0 text-primary"
-            />
-
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                Règle d&#39;import
-              </p>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Le fichier Excel doit utiliser les clés des champs comme
-                en-têtes de colonnes. La validation finale est effectuée par le
-                backend contre le schéma effectif de la ressource.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </>

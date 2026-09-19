@@ -28,7 +28,6 @@ export function PluginResourceExcelImport({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
-
   const [isPending, setIsPending] = useState(false);
 
   const [errors, setErrors] = useState<PluginResourceImportError[]>([]);
@@ -88,10 +87,9 @@ export function PluginResourceExcelImport({
         imported: 0,
         rejected: 0,
       };
-
       setResult({
-        imported: data.imported ?? 0,
-        rejected: data.rejected ?? 0,
+        imported: data.imported,
+        rejected: data.rejected,
       });
 
       toast.success(`${data.imported ?? 0} donnée(s) importée(s) avec succès.`);
@@ -144,155 +142,168 @@ export function PluginResourceExcelImport({
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card">
-      <div className="border-b border-border px-6 py-5">
-        <div className="flex items-center gap-3">
-          <FileSpreadsheet size={19} className="text-primary" />
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx"
+        onChange={handleFileChange}
+        className="hidden"
+        disabled={disabled || isPending}
+      />
 
+      <button
+        type="button"
+        onClick={selectFile}
+        disabled={disabled || isPending}
+        className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/10 px-6 py-10 text-center transition hover:border-primary/40 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <FileSpreadsheet size={30} className="text-primary" />
+
+        <span className="mt-3 text-sm font-semibold text-foreground">
+          {file ? file.name : "Sélectionner un fichier Excel"}
+        </span>
+
+        <span className="mt-1 text-xs text-muted-foreground">
+          Format accepté : .xlsx
+        </span>
+      </button>
+
+      {/* ============================================================
+       * DATA RULES
+       * ========================================================== */}
+
+      <div className="mb-8 border border-border bg-muted/10 px-5 py-4  bg-yellow-300/80">
+        <div className="flex items-start gap-3">
           <div>
-            <h2 className="text-base font-semibold text-foreground">
-              Import Excel
+            <h2 className="text-sm font-semibold text-foreground text-yellow-900">
+              Règle d&#39;import
             </h2>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              Importez plusieurs données en respectant exactement le schéma.
+            <p className="mt-1 text-sm text-muted-foreground text-yellow-900">
+              Le fichier Excel doit utiliser les clés des champs comme en-têtes
+              de colonnes. La validation finale est effectuée par le serveur
+              contre le schéma effectif de la ressource.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-6">
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx"
-          onChange={handleFileChange}
-          className="hidden"
-          disabled={disabled || isPending}
-        />
+      {file && (
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/20 px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">
+              {file.name}
+            </p>
 
-        <button
-          type="button"
-          onClick={selectFile}
-          disabled={disabled || isPending}
-          className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/10 px-6 py-10 text-center transition hover:border-primary/40 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Upload size={28} className="text-primary" />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {(file.size / 1024).toFixed(1)} KB
+            </p>
+          </div>
 
-          <span className="mt-3 text-sm font-semibold text-foreground">
-            {file ? file.name : "Sélectionner un fichier Excel"}
-          </span>
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={disabled || isPending}
+            style={{
+              background: "var(--color-surface-raised)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-foreground)",
+              padding: "0.5rem 1rem",
+              borderRadius: "0.75rem",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+              transition: "background 0.2s, border-color 0.2s",
+            }}
+          >
+            {isPending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Upload size={16} />
+            )}
 
-          <span className="mt-1 text-xs text-muted-foreground">
-            Format accepté : .xlsx
-          </span>
-        </button>
+            {isPending ? "Importation..." : "Importer"}
+          </button>
+        </div>
+      )}
 
-        {file && (
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/20 px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">
-                {file.name}
+      {result && (
+        <div className="mt-5 rounded-xl border border-border bg-muted/20 p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-success" />
+
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Résultat de l&#39;import
+              </p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Importées : <strong>{result.imported}</strong>
+                {" · "}
+                Rejetées : <strong>{result.rejected}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {errors.length > 0 && (
+        <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/5">
+          <div className="flex items-start gap-3 border-b border-destructive/10 px-4 py-4">
+            <AlertCircle
+              size={18}
+              className="mt-0.5 shrink-0 text-destructive"
+            />
+
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Erreurs de validation
               </p>
 
               <p className="mt-1 text-xs text-muted-foreground">
-                {(file.size / 1024).toFixed(1)} KB
+                Aucune ligne n&#39;a été importée.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={handleImport}
-              disabled={disabled || isPending}
-              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-medium text-white gradient-brand glow-primary disabled:opacity-50"
-            >
-              {isPending ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Upload size={16} />
-              )}
-              Importer
-            </button>
           </div>
-        )}
 
-        {result && (
-          <div className="mt-5 rounded-xl border border-border bg-muted/20 p-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2
-                size={18}
-                className="mt-0.5 shrink-0 text-success"
-              />
+          <div className="max-h-[300px] overflow-auto p-4">
+            <div className="space-y-2">
+              {errors.map((error, index) => (
+                <div
+                  key={`${error.row}-${error.field}-${index}`}
+                  className="rounded-lg border border-border bg-card px-3 py-3"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-semibold text-foreground">
+                      Ligne {error.row}
+                    </span>
 
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Résultat de l&#39;import
-                </p>
+                    {error.column && (
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        {error.column}
+                      </code>
+                    )}
 
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Importées : <strong>{result.imported}</strong>
-                  {" · "}
-                  Rejetées : <strong>{result.rejected}</strong>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {errors.length > 0 && (
-          <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/5">
-            <div className="flex items-start gap-3 border-b border-destructive/10 px-4 py-4">
-              <AlertCircle
-                size={18}
-                className="mt-0.5 shrink-0 text-destructive"
-              />
-
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Erreurs de validation
-                </p>
-
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Aucune ligne n&#39;a été importée.
-                </p>
-              </div>
-            </div>
-
-            <div className="max-h-[360px] overflow-auto p-4">
-              <div className="space-y-2">
-                {errors.map((error, index) => (
-                  <div
-                    key={`${error.row}-${error.field}-${index}`}
-                    className="rounded-lg border border-border bg-card px-3 py-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="font-semibold text-foreground">
-                        Ligne {error.row}
-                      </span>
-
-                      {error.column && (
-                        <code className="rounded bg-muted px-1.5 py-0.5">
-                          {error.column}
-                        </code>
-                      )}
-
-                      {error.field && (
-                        <code className="rounded bg-muted px-1.5 py-0.5">
-                          {error.field}
-                        </code>
-                      )}
-                    </div>
-
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {error.message}
-                    </p>
+                    {error.field && (
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        {error.field}
+                      </code>
+                    )}
                   </div>
-                ))}
-              </div>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {error.message}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

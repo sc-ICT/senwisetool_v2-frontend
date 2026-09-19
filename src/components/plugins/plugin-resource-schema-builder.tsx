@@ -186,6 +186,7 @@ export function PluginResourceSchemaBuilder({
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
 
   const [isAddingField, setIsAddingField] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const [fieldForm, setFieldForm] = useState<FieldFormState>({
     ...EMPTY_FIELD,
@@ -271,11 +272,13 @@ export function PluginResourceSchemaBuilder({
       await invalidate();
 
       toast.success("Champ supprimé avec succès.");
+      setDeletingId(null);
     },
 
     onError: (error) => {
       if (error instanceof ApiError) {
         toast.error(error.message);
+        setDeletingId(null);
         return;
       }
 
@@ -509,6 +512,7 @@ export function PluginResourceSchemaBuilder({
       return;
     }
 
+    setDeletingId(field.id);
     deleteFieldMutation.mutate({
       resourceId: resource.id,
       fieldId: field.id,
@@ -533,7 +537,20 @@ export function PluginResourceSchemaBuilder({
           <button
             type="button"
             onClick={startAdd}
-            className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium text-white gradient-brand glow-primary hover:opacity-90"
+            style={{
+              background: "var(--color-surface-raised)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-foreground)",
+              padding: "0.5rem 1rem",
+              borderRadius: "0.75rem",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+              transition: "background 0.2s, border-color 0.2s",
+            }}
           >
             <Plus size={16} />
             Ajouter un champ
@@ -651,7 +668,12 @@ export function PluginResourceSchemaBuilder({
                         className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         title="Supprimer"
                       >
-                        <Trash2 size={16} />
+                        {deletingId === field.id &&
+                        deleteFieldMutation.isPending ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
                       </button>
                     </div>
                   )}
@@ -679,7 +701,20 @@ export function PluginResourceSchemaBuilder({
                         <button
                           type="submit"
                           disabled={isFormPending}
-                          className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium text-white gradient-brand glow-primary disabled:opacity-50"
+                          style={{
+                            background: "var(--color-surface-raised)",
+                            border: "1px solid var(--color-border)",
+                            color: "var(--color-foreground)",
+                            padding: "0.5rem 1rem",
+                            borderRadius: "0.75rem",
+                            fontSize: "0.8125rem",
+                            fontWeight: 600,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            cursor: "pointer",
+                            transition: "background 0.2s, border-color 0.2s",
+                          }}
                         >
                           {isFormPending ? (
                             <Loader2 size={16} className="animate-spin" />

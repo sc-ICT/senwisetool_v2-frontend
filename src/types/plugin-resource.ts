@@ -1,26 +1,32 @@
-import type { PluginResourceScope } from "@/types/plugin";
+export type PluginResourceScope = "GLOBAL" | "USER";
 
 export type PluginFieldType =
   | "TEXT"
   | "LONG_TEXT"
   | "NUMBER"
+  | "INTEGER"
   | "DECIMAL"
   | "BOOLEAN"
   | "DATE"
   | "DATETIME"
-  | "EMAIL"
-  | "PHONE"
-  | "COUNTRY"
   | "SINGLE_CHOICE"
   | "MULTIPLE_CHOICE"
-  | "URL";
+  | "EMAIL"
+  | "PHONE"
+  | "URL"
+  | "FILE"
+  | "IMAGE"
+  | "LOCATION";
 
 export interface PluginResourceField {
   id: number;
+
   resource_id: number;
 
   key: string;
+
   label: string;
+
   description: string | null;
 
   field_type: PluginFieldType;
@@ -28,9 +34,11 @@ export interface PluginResourceField {
   required: boolean;
 
   min_length: number | null;
+
   max_length: number | null;
 
   min_value: number | null;
+
   max_value: number | null;
 
   pattern: string | null;
@@ -40,25 +48,28 @@ export interface PluginResourceField {
   default_value: unknown;
 
   position: number;
+
   is_active: boolean;
 
   created_at: string;
+
   updated_at: string;
 }
 
 export interface PluginResource {
   id: number;
+
   plugin_id: number;
 
   key: string;
+
   name: string;
+
   description: string | null;
 
   scope: PluginResourceScope;
 
   allow_user_schema_override: boolean;
-
-  schema_definition: Record<string, unknown>;
 
   position: number;
 
@@ -66,171 +77,81 @@ export interface PluginResource {
 
   is_active: boolean;
 
-  created_at: string;
-  updated_at: string;
-
   fields: PluginResourceField[];
+
+  created_at: string;
+
+  updated_at: string;
 }
+
+/* ============================================================
+ * RESOURCE LIST
+ * ========================================================== */
 
 export interface PluginResourceListResponse {
   items: PluginResource[];
+
   count: number;
 }
 
-export interface PluginResourceFieldCreate {
-  key: string;
-  label: string;
-  description?: string | null;
-
-  field_type: PluginFieldType;
-
-  required?: boolean;
-
-  min_length?: number | null;
-  max_length?: number | null;
-
-  min_value?: number | null;
-  max_value?: number | null;
-
-  pattern?: string | null;
-
-  options?: unknown[];
-
-  default_value?: unknown;
-
-  position?: number;
-
-  is_active?: boolean;
-}
-
-export interface PluginResourceFieldUpdate {
-  key?: string;
-  label?: string;
-  description?: string | null;
-
-  field_type?: PluginFieldType;
-
-  required?: boolean;
-
-  min_length?: number | null;
-  max_length?: number | null;
-
-  min_value?: number | null;
-  max_value?: number | null;
-
-  pattern?: string | null;
-
-  options?: unknown[];
-
-  default_value?: unknown;
-
-  position?: number;
-
-  is_active?: boolean;
-}
-
-export interface PluginResourceCreate {
-  key: string;
-  name: string;
-  description?: string | null;
-
-  scope: PluginResourceScope;
-
-  allow_user_schema_override?: boolean;
-
-  position?: number;
-
-  icon?: string | null;
-
-  is_active?: boolean;
-
-  fields?: PluginResourceFieldCreate[];
-}
-
-export interface PluginResourceUpdate {
-  name?: string;
-  description?: string | null;
-
-  scope?: PluginResourceScope;
-
-  allow_user_schema_override?: boolean;
-
-  position?: number;
-
-  icon?: string | null;
-
-  is_active?: boolean;
-}
-
 /* ============================================================
- * EFFECTIVE SCHEMA
+ * RESOURCE RELATIONS
  * ========================================================== */
 
-export interface PluginResourceEffectiveSchema {
-  resource_id: number;
-
-  scope: PluginResourceScope;
-
-  allow_user_schema_override: boolean;
-
-  is_overridden: boolean;
-
-  schema_definition: {
-    version?: number;
-    fields: PluginResourceSchemaField[];
-  };
-
-  fields: PluginResourceSchemaField[];
-}
-
-export interface PluginResourceSchemaField {
-  key: string;
-  label: string;
-  description?: string | null;
-
-  field_type: PluginFieldType;
-
-  required: boolean;
-
-  min_length?: number | null;
-  max_length?: number | null;
-
-  min_value?: number | null;
-  max_value?: number | null;
-
-  pattern?: string | null;
-
-  options?: unknown[];
-
-  default_value?: unknown;
-
-  position: number;
-
-  is_active: boolean;
-}
-
-export interface PluginResourceUserSchemaUpdate {
-  fields: PluginResourceFieldCreate[];
-}
-
-export interface PluginResourceUserSchema {
+export interface PluginResourceRelation {
   id: number;
 
-  resource_id: number;
+  source_resource_id: number;
 
-  user_id: number;
+  source_field_key: string;
 
-  schema_definition: {
-    version?: number;
-    fields: PluginResourceSchemaField[];
-  };
+  target_resource_id: number;
+
+  target_field_key: string;
+
+  source_resource_name: string;
+
+  target_resource_name: string;
+
+  label: string | null;
+
+  is_active: boolean;
 
   created_at: string;
+
   updated_at: string;
 }
 
+export interface PluginResourceRelationCreate {
+  source_field_key: string;
+
+  target_resource_id: number;
+
+  target_field_key: string;
+
+  label?: string | null;
+
+  is_active?: boolean;
+}
+
+export interface PluginResourceRelatedRecordsResponse {
+  relation_id: number;
+
+  source_resource_id: number;
+
+  source_record_id: number;
+
+  target_resource_id: number;
+
+  direction: "SOURCE_TO_TARGET" | "TARGET_TO_SOURCE";
+
+  items: PluginResourceRecord[];
+
+  count: number;
+}
+
 /* ============================================================
- * RECORDS
+ * RESOURCE RECORD
  * ========================================================== */
 
 export interface PluginResourceRecord {
@@ -287,6 +208,73 @@ export interface PluginResourceImportResponse {
   imported: number;
 
   rejected: number;
+
+  errors: PluginResourceImportError[];
+}
+
+export interface PluginResourceRelation {
+  id: number;
+
+  source_resource_id: number;
+  source_field_key: string;
+
+  target_resource_id: number;
+  target_field_key: string;
+
+  source_resource_name: string;
+  target_resource_name: string;
+
+  label: string | null;
+
+  is_active: boolean;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PluginResourceRelationCreate {
+  source_field_key: string;
+
+  target_resource_id: number;
+
+  target_field_key: string;
+
+  label?: string | null;
+
+  is_active?: boolean;
+}
+
+export interface PluginResourceRelatedRecordsResponse {
+  relation_id: number;
+
+  source_resource_id: number;
+
+  source_record_id: number;
+
+  target_resource_id: number;
+
+  direction: "SOURCE_TO_TARGET" | "TARGET_TO_SOURCE";
+
+  items: PluginResourceRecord[];
+
+  count: number;
+}
+
+export interface PluginResourceWorkbookImportResponse {
+  plugin_id: number;
+
+  sheets: number;
+
+  resources_created: number;
+  resources_updated: number;
+
+  schemas_created: number;
+  schemas_updated: number;
+
+  relations_created: number;
+  relations_existing: number;
+
+  records_imported: number;
 
   errors: PluginResourceImportError[];
 }
